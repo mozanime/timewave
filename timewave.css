@@ -1,0 +1,135 @@
+body {
+  margin: 0;
+}
+#animatable {
+  background-color: lime;
+  height: 100px;
+}
+
+/** clonable **/
+#cloneables .result .right {
+  height: 30px;
+  background-color: black;
+}
+
+/** tools **/
+#devtool {
+}
+#timewave {
+  position: absolute;
+  bottom: 0px;
+  width: 100%;
+}
+
+.animation {
+  font-family: monospace;
+}
+
+/** timeline **/
+.timeline {
+  background-color: #f8f8f8;
+  border-top: 1px solid #ddd;
+}
+.timeline .ruler {
+  width: 80%;
+  margin-left: 20%;
+  position: relative;
+}
+.timeline .ruler label:nth-child(n+2) {
+  position: absolute;
+}
+.timeline .ruler label:last-child:after {
+  content: "ms";
+}
+
+/** content **/
+.row {
+  clear: both;
+  border-top: 1px solid #ddd;
+}
+.row.easing-selector {
+  border-top-width: 0px;
+}
+.row>div {
+  float: left;
+}
+.row .left {
+  width: 20%;
+  color: #0095dd;
+  padding: 0.5em 0 0.5em 0;
+}
+.row .right {
+  width: calc(80% - 1px);
+  position: relative;
+  border-left: 1px solid #ddd;
+}
+
+/** left pane **/
+.left .target {
+  padding-left: 0.5em;
+}
+
+.left .property {
+  display: flex;
+}
+
+.property>.name {
+  padding-left: 1em;
+  width: 5em;
+}
+
+.property>.value {
+  padding-left: 1em;
+}
+
+/** right pane **/
+/** result **/
+.result .throbber {
+  position: absolute;
+  background-color: red;
+  width: 1px;
+  height: 100%;
+  top: 0px;
+  left: 50%;
+}
+.result canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/** easing **/
+.easing svg {
+  fill: #eee;
+}
+
+/** easing selector **/
+.easing-selector .right {
+  display: flex;
+}
+.easing-selector .selection {
+  width: 100px;
+  height: 100px;
+  border: 1px solid #0095dd;
+  border-radius: 1em;
+  margin: 0.5em;
+  background-size: cover;
+  background-position: 0% 70%;
+}
+.easing-selector .selection.selected {
+  border-color: pink;
+}
+.easing-selector .linear {
+  background-image: url(resources/linear.png);
+}
+.easing-selector .ease {
+  background-image: url(resources/ease.png);
+}
+.easing-selector .ease-in {
+  background-image: url(resources/ease-in.png);
+}
+.easing-selector .ease-in-out {
+  background-image: url(resources/ease-in-out.png);
+}
+.easing-selector .ease-out {
+  background-image: url(resources/ease-out.png);
+}
