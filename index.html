@@ -23,14 +23,15 @@
 
     <script>
     const keyframe = { opacity: [1, 0.3, 1], width: ["0px", "100px"] };
-    const timingeffect = { duration: 10000, iterations: 1, fill: "both", easing: "ease-in"};
+    const timingeffect =
+      { duration: 1000, iterations: 1, fill: "both", easing: "ease-in"};
     document.getElementById("animatable").animate(keyframe, timingeffect);
     </script>
 
-    <section id="cloneables">
+    <section id="cloneables" style="display: none;">
       <div class="animation">
         <div class="timeline">
-          <div class="ruler"><label>0</label><label style="left: 50%;">50</label><label style="right: 0;">100</label></div>
+          <div class="ruler"><label>0</label><label>50</label><label>100</label></div>
         </div>
 
         <div class="row result">
@@ -55,8 +56,8 @@
             </div>
           </div>
           <div class="right">
-            <svg width="100%" viewBox="0 0 100 10">
-              <path d="M0,10 C0,10 100,0 100,0 L100, 10"></path>
+            <svg width="100%" viewBox="0 0 100 20">
+              <path d="M0,20 C0,20 100,0 100,0 L100, 20"></path>
             </svg>
           </div>
         </div>
@@ -72,6 +73,17 @@
           </div>
         </div>
 
+        <div class="row property opacity">
+          <div class="left property">
+            <div class="name">opacity</div>
+          </div>
+          <div class="right">
+            <div class="ruler"><label>0</label><label>0.5</label><label>1.0</label></div>
+            <svg width="100%" viewBox="0 0 100 30">
+              <path d="M0,30 C0,30 100,0 100,0 L100, 30"></path>
+            </svg>
+          </div>
+        </div>
       </div>
     </section>
   </body>

@@ -1,4 +1,7 @@
-const COLORS = ["#1f77b488", "#ff7f0e88"];
+const COLORS = {
+  opacity: "#1f77b4",
+  width: "#ff7f0e"
+}
 
 const $ = (selector) => {
   return document.querySelector(selector);
@@ -53,9 +56,11 @@ const Timewave = {
         if (typeof property.min === "undefined") {
           property.min = value;
           property.max = value;
+          property.count = 1;
         } else {
           property.min = Math.min(property.min, value);
           property.max = Math.max(property.max, value);
+          property.count += 1;
         }
       }
     });
@@ -90,10 +95,10 @@ const Timewave = {
     const left = $$(".left");
     $$(".right").style.height = `${left.clientHeight}px`;
 
-    const zeroLabel = $$(".ruler label:first-child");
+    const zeroLabel = $$(".timeline .ruler label:first-child");
     {
       const extraLabels =
-        animationEL.querySelectorAll(".ruler label:nth-child(n+2)");
+        animationEL.querySelectorAll(".timeline .ruler label:nth-child(n+2)");
       for (let label of extraLabels) {
         label.parentNode.removeChild(label);
       }
@@ -120,7 +125,7 @@ const Timewave = {
 
     // interaction
     //completeGraphEL.addEventListener("click", () => {
-      Timewave.extract(animation.id, animationEL);
+      Timewave.extract(animation.id);
     //});
 
     Timewave.replay(animation.id);
@@ -177,13 +182,14 @@ const Timewave = {
     const xrate = totalTime / width;
     canvasContext.fillStyle = "white";
     canvasContext.fillRect(0, 0, width, height);
+    canvasContext.globalAlpha = 0.7;
     const propertyNames = Object.keys(properties);
     for (let x = 0; x < width; x++) {
       const currentTime = x * xrate;
       animation.currentTime = currentTime;
       const computedStyle = window.getComputedStyle(target);
-      Array.prototype.forEach.call(propertyNames, (propertyName, i) => {
-        canvasContext.strokeStyle = COLORS[i];
+      propertyNames.forEach(propertyName => {
+        canvasContext.strokeStyle = COLORS[propertyName];
         const value = Timewave.numberize(computedStyle[propertyName]);
         const property = properties[propertyName];
         const minvalue = property.min;
@@ -194,10 +200,10 @@ const Timewave = {
         canvasContext.stroke();
       });
     }
-    Array.prototype.forEach.call(propertyNames, (propertyName, i) => {
+    propertyNames.forEach(propertyName => {
       const propertyEL =
         document.querySelector(`#${id} .property.${propertyName}`);
-      propertyEL.style.color = COLORS[i];
+      propertyEL.style.color = COLORS[propertyName];
     });
   },
   updateEasing: (id, easing) => {
@@ -215,44 +221,19 @@ const Timewave = {
     const maxx =
       svgEL.viewBox.baseVal.width / context.resultTotalTime * context.totalTime;
     const maxy = svgEL.viewBox.baseVal.height;
-    let p;
-    switch (easing) {
-      case "linear" : {
-        p = Timewave.cubicBezier(0, 0, 1, 1, maxx, maxy);
-        break;
-      }
-      case "ease" : {
-        p = Timewave.cubicBezier(0.25, 1, 0.25, 1, maxx, maxy);
-        break;
-      }
-      case "ease-in" : {
-        p = Timewave.cubicBezier(0.42, 0, 1, 1, maxx, maxy);
-        break;
-      }
-      case "ease-in-out" : {
-        p = Timewave.cubicBezier(0.48, 0, 0.58, 1, maxx, maxy);
-        break;
-      }
-      case "ease-out" : {
-        p = Timewave.cubicBezier(0, 0, 0.58, 1, maxx, maxy);
-        break;
-      }
-    }
-    const pathEL = $(`#${id} .easing path`);
+    const p = Timewave.getControlPoints(easing, maxx, maxy);
+    const pathEL = svgEL.querySelector("path");
     const d = `M0, ${maxy} C${p.cx1},${p.cy1} ${p.cx2},${p.cy2} `
                + `${maxx},0 L${maxx},${maxy}`;
     pathEL.setAttribute("d", d);
   },
 
-  cubicBezier: (x1, y1, x2, y2, maxx, maxy) => {
-    return { cx1: maxx*x1, cy1: (1-y1)*maxy, cx2: maxx*x2, cy2: (1-y2)*maxy };
-  },
-
   // extract ----------------------------------------------------
-  extract: (id, parentEL) => {
-    Timewave.extractEasing(id, parentEL);
+  extract: id => {
+    Timewave.extractEasing(id);
+    Timewave.extractProperties(id);
   },
-  extractEasing: (id, parentEL) => {
+  extractEasing: id => {
     const target = Timewave.contexts[id].target;
     const animation = target.getAnimations({ id: id })[0];
     const propertyValueEL = $(`#${id} .easing .value`);
@@ -286,11 +267,76 @@ const Timewave = {
     };
     Timewave.updateEasing(id, easing);
   },
-  extractProperties: (id, parentEL) => {
-  },
-  extractProperty: (id, propertyName, parentEL) => {
+
+  extractProperties: id => {
+    const context = Timewave.contexts[id];
+    const properties = context.properties;
+    const animation = context.target.getAnimations({ id: id })[0];
+    const propertyEL = $(`#${id} .row.property`);
+    const keyframes = animation.effect.getKeyframes();
+    for (let propertyName in properties) {
+      const property = properties[propertyName];
+      const cloned = propertyEL.cloneNode(true);
+      cloned.classList.add(propertyName);
+      const propertyNameEL = cloned.querySelector(".name");
+      propertyNameEL.style.color = COLORS[propertyName];
+      propertyNameEL.textContent = propertyName;
+      const svgEL = cloned.querySelector("svg");
+      const maxx = svgEL.viewBox.baseVal.width;
+      const maxy = svgEL.viewBox.baseVal.height;
+      const minvalue = property.min;
+      const yrate = maxy / (property.max - property.min);
+      const xrate = maxx / (keyframes.length - 1);
+
+      let d;
+      keyframes.forEach((keyframe, i) => {
+        if (keyframe[propertyName]) {
+          if (i === 0) {
+            d = "M";
+          } else {
+            d += "L";
+          }
+          const value = Timewave.numberize(keyframe[propertyName]);
+          const x = i * xrate;
+          const y = (property.max - value) * yrate;
+          d += `${x},${y} `;
+        }
+      });
+      d += `L${maxx},${maxy} L0,${maxy}`;
+
+      const pathEL = svgEL.querySelector("path");
+      pathEL.setAttribute("d", d);
+      pathEL.style.fill = COLORS[propertyName];
+      propertyEL.parentNode.appendChild(cloned);
+    }
+
+    // remove original
+    propertyEL.parentNode.removeChild(propertyEL);
+
   },
 
+  getControlPoints: (easing, maxx, maxy) => {
+    switch (easing) {
+      case "linear" : {
+        return Timewave.cubicBezier(0, 0, 1, 1, maxx, maxy);
+      }
+      case "ease" : {
+        return Timewave.cubicBezier(0.25, 1, 0.25, 1, maxx, maxy);
+      }
+      case "ease-in" : {
+        return Timewave.cubicBezier(0.42, 0, 1, 1, maxx, maxy);
+      }
+      case "ease-in-out" : {
+        return Timewave.cubicBezier(0.48, 0, 0.58, 1, maxx, maxy);
+      }
+      case "ease-out" : {
+        return Timewave.cubicBezier(0, 0, 0.58, 1, maxx, maxy);
+      }
+    }
+  },
+  cubicBezier: (x1, y1, x2, y2, maxx, maxy) => {
+    return { cx1: maxx*x1, cy1: (1-y1)*maxy, cx2: maxx*x2, cy2: (1-y2)*maxy };
+  },
   numberize: value => {
     return Number(value.replace(/[A-Za-z]+/, ""));
   },
