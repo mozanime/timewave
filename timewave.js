@@ -67,8 +67,9 @@ const Timewave = {
 
     const duration = animation.effect.timing.duration;
     const delay = animation.effect.timing.delay;
+    const iterationCount = Timewave.getDisplayableIterationCount(animation);
     const easing = animation.effect.timing.easing;
-    const totalTime = duration + delay;
+    const totalTime = (duration * iterationCount) + delay;
     // ----------------------------------------------
 
     const $$ = selector => {
@@ -145,6 +146,7 @@ const Timewave = {
 
     const totalTime = context.resultTotalTime;
     const xrate = totalTime / width;
+    canvasContext.globalAlpha = 1;
     canvasContext.fillStyle = "white";
     canvasContext.fillRect(0, 0, width, height);
     canvasContext.globalAlpha = 0.7;
@@ -194,14 +196,41 @@ const Timewave = {
   updateEasingGraph: (id, easing) => {
     const svgEL = $(`#${id} .easing svg`);
     const context = Timewave.contexts[id];
-    const maxx =
+    const animation = context.target.getAnimations({ id: id })[0];
+    const delay = animation.effect.timing.delay;
+    const iterationCount = Timewave.getDisplayableIterationCount(animation);
+    const direction = animation.effect.timing.direction;
+
+    const width =
       svgEL.viewBox.baseVal.width / context.resultTotalTime * context.totalTime;
-    const maxy = svgEL.viewBox.baseVal.height;
-    const p = Timewave.getControlPoints(easing, maxx, maxy);
-    const pathEL = svgEL.querySelector("path");
-    const d = `M0, ${maxy} C${p.cx1},${p.cy1} ${p.cx2},${p.cy2} `
-               + `${maxx},0 L${maxx},${maxy}`;
-    pathEL.setAttribute("d", d);
+    const height = svgEL.viewBox.baseVal.height;
+    const xrate = width / context.totalTime;
+    const delayx = xrate * delay;
+    const iterationWidth = (width - delayx) / iterationCount;
+    const p =
+      Timewave.getControlPoints(easing, iterationWidth, height);
+    let d = "";
+    let endx = delayx;
+    for (let i = 0; i < iterationCount; i++) {
+      const nextendx = endx + iterationWidth;
+      const isForward = direction === "normal" ||
+                        (direction === "alternate" && i % 2 === 0) ||
+                        (direction === "alternate-reverse" && i % 2 === 1);
+      if (isForward) {
+        d += `M${endx},${height} `
+          + `C${endx + p.cx1},${p.cy1} `
+          + `${endx + p.cx2},${p.cy2} `
+          + `${nextendx},0 `;
+      } else {
+        d += `M${endx},0 `
+          + `C${endx + iterationWidth - p.cx2},${p.cy2} `
+          + `${endx + iterationWidth - p.cx1},${p.cy1} `
+          + `${nextendx},${height} `;
+      }
+      d += `L${nextendx},${height} L${endx},${height}`;
+      endx = nextendx;
+    }
+    svgEL.querySelector("path").setAttribute("d", d);
   },
 
   // extract ----------------------------------------------------
@@ -284,6 +313,12 @@ const Timewave = {
   replay: id => {
     Timewave.contexts[id].target.getAnimations({ id: id })[0].currentTime = 0;
     Timewave.startObserver(id);
+  },
+
+  getDisplayableIterationCount: animation => {
+    return animation.effect.timing.iterations === Infinity ||
+           animation.effect.timing.iterations > 3
+           ? 3 : animation.effect.timing.iterations;
   },
 
   startObserver: id => {

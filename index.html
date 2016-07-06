@@ -22,9 +22,9 @@
     </section>
 
     <script>
-    const keyframe = { opacity: [1, 0.3, 1], width: ["0px", "100px"] };
+    const keyframe = { opacity: [1, 0.3, 1], width: ["100px", "0px"] };
     const timingeffect =
-      { duration: 1000, iterations: 1, fill: "both", easing: "ease-in"};
+      { delay: 100, duration: 1000, direction: "alternate-reverse", iterations: 4, fill: "both", easing: "ease-in"};
     document.getElementById("animatable").animate(keyframe, timingeffect);
     </script>
 
@@ -73,7 +73,7 @@
           </div>
         </div>
 
-        <div class="row property opacity">
+        <div class="row property">
           <div class="left property">
             <div class="name">opacity</div>
           </div>

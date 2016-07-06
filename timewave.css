@@ -6,12 +6,6 @@ body {
   height: 100px;
 }
 
-/** clonable **/
-#cloneables .result .right {
-  height: 30px;
-  background-color: black;
-}
-
 /** tools **/
 #devtool {
 }
@@ -34,6 +28,7 @@ body {
   width: 80%;
   margin-left: 20%;
   position: relative;
+  border-left: 1px solid #ddd;
 }
 .timeline .ruler label:nth-child(n+2) {
   position: absolute;
@@ -165,4 +160,14 @@ body {
 }
 .row.property .ruler label:last-child {
   right: 0;
+}
+
+/** clonable **/
+#cloneable {
+  display: none:
+}
+
+#cloneables .result .right {
+  height: 30px;
+  background-color: black;
 }
