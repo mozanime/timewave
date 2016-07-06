@@ -131,41 +131,6 @@ const Timewave = {
     Timewave.replay(animation.id);
   },
 
-  replay: id => {
-    Timewave.contexts[id].target.getAnimations({ id: id })[0].currentTime = 0;
-    Timewave.startObserver(id);
-  },
-
-  startObserver: id => {
-    // Observe manually in here
-    // If the context is chrome,
-    // we can use mutableobserver.observe(node, { animations: true });
-    const context = Timewave.contexts[id];
-    const animation = context.target.getAnimations({ id: id })[0];
-    const throbber = $(`#${id} .throbber`);
-    const valueELs = {};
-    for (let propertyName in context.properties) {
-      valueELs[propertyName] = $(`#${id} .${propertyName} .value`);
-    }
-
-    const observe = () => {
-      const throbberPosition = animation.currentTime / context.resultTotalTime;
-      throbber.style.left = `${throbberPosition * 100}%`;
-      const computedStyle = window.getComputedStyle(context.target);
-      for (let propertyName in context.properties) {
-        const value = computedStyle[propertyName];
-        const valueEL = valueELs[propertyName];
-        if (valueEL) {
-          valueEL.textContent = value;
-        }
-      }
-      if (animation.currentTime < context.totalTime) {
-        window.requestAnimationFrame(observe);
-      }
-    };
-    observe();
-  },
-
   // update ----------------------------------------------------
   updateCanvas: id => {
     const context = Timewave.contexts[id];
@@ -206,7 +171,17 @@ const Timewave = {
       propertyEL.style.color = COLORS[propertyName];
     });
   },
+
   updateEasing: (id, easing) => {
+    const selectionELs =
+      document.querySelectorAll(`#${id} .easing-selector .selection`);
+    for (let selectionEL of selectionELs) {
+      if (selectionEL.dataset.easing !== easing) {
+        selectionEL.classList.remove("selected");
+      } else {
+        selectionEL.classList.add("selected");
+      }
+    };
     const target = Timewave.contexts[id].target;
     const animation = target.getAnimations({ id: id })[0];
     document.querySelector(".easing .value").textContent = easing;
@@ -215,6 +190,7 @@ const Timewave = {
     Timewave.updateEasingGraph(id, easing);
     Timewave.replay(id);
   },
+
   updateEasingGraph: (id, easing) => {
     const svgEL = $(`#${id} .easing svg`);
     const context = Timewave.contexts[id];
@@ -233,6 +209,7 @@ const Timewave = {
     Timewave.extractEasing(id);
     Timewave.extractProperties(id);
   },
+
   extractEasing: id => {
     const target = Timewave.contexts[id].target;
     const animation = target.getAnimations({ id: id })[0];
@@ -251,21 +228,9 @@ const Timewave = {
         selectionEL.classList.remove("selected");
       }
       selectionEL.addEventListener("click", e => {
-        Timewave.selectedEasing(animation.id, e.target.dataset.easing);
+        Timewave.updateEasing(animation.id, e.target.dataset.easing);
       });
     };
-  },
-  selectedEasing: (id, easing) => {
-    const selectionELs =
-      document.querySelectorAll(`#${id} .easing-selector .selection`);
-    for (let selectionEL of selectionELs) {
-      if (selectionEL.dataset.easing !== easing) {
-        selectionEL.classList.remove("selected");
-      } else {
-        selectionEL.classList.add("selected");
-      }
-    };
-    Timewave.updateEasing(id, easing);
   },
 
   extractProperties: id => {
@@ -315,6 +280,42 @@ const Timewave = {
 
   },
 
+  // other --------------------------------------------------------------
+  replay: id => {
+    Timewave.contexts[id].target.getAnimations({ id: id })[0].currentTime = 0;
+    Timewave.startObserver(id);
+  },
+
+  startObserver: id => {
+    // Observe manually in here
+    // If the context is chrome,
+    // we can use mutableobserver.observe(node, { animations: true });
+    const context = Timewave.contexts[id];
+    const animation = context.target.getAnimations({ id: id })[0];
+    const throbber = $(`#${id} .throbber`);
+    const valueELs = {};
+    for (let propertyName in context.properties) {
+      valueELs[propertyName] = $(`#${id} .${propertyName} .value`);
+    }
+
+    const observe = () => {
+      const throbberPosition = animation.currentTime / context.resultTotalTime;
+      throbber.style.left = `${throbberPosition * 100}%`;
+      const computedStyle = window.getComputedStyle(context.target);
+      for (let propertyName in context.properties) {
+        const value = computedStyle[propertyName];
+        const valueEL = valueELs[propertyName];
+        if (valueEL) {
+          valueEL.textContent = value;
+        }
+      }
+      if (animation.currentTime < context.totalTime) {
+        window.requestAnimationFrame(observe);
+      }
+    };
+    observe();
+  },
+
   getControlPoints: (easing, maxx, maxy) => {
     switch (easing) {
       case "linear" : {
@@ -334,12 +335,15 @@ const Timewave = {
       }
     }
   },
+
   cubicBezier: (x1, y1, x2, y2, maxx, maxy) => {
     return { cx1: maxx*x1, cy1: (1-y1)*maxy, cx2: maxx*x2, cy2: (1-y2)*maxy };
   },
+
   numberize: value => {
     return Number(value.replace(/[A-Za-z]+/, ""));
   },
+
   getMinMax: values => {
     let max = values[0];
     let min = max;
