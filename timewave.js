@@ -123,32 +123,46 @@ const Timewave = {
       Timewave.extract(animation.id, animationEL);
     //});
 
+    Timewave.replay(animation.id);
+  },
+
+  replay: id => {
+    Timewave.contexts[id].target.getAnimations({ id: id })[0].currentTime = 0;
+    Timewave.startObserver(id);
+  },
+
+  startObserver: id => {
     // Observe manually in here
     // If the context is chrome,
     // we can use mutableobserver.observe(node, { animations: true });
-    const throbber = $(`#${animation.id} .throbber`);
+    const context = Timewave.contexts[id];
+    const animation = context.target.getAnimations({ id: id })[0];
+    const throbber = $(`#${id} .throbber`);
+    const valueELs = {};
+    for (let propertyName in context.properties) {
+      valueELs[propertyName] = $(`#${id} .${propertyName} .value`);
+    }
+
     const observe = () => {
-      const throbberPosition = animation.currentTime / resultTotalTime;
+      const throbberPosition = animation.currentTime / context.resultTotalTime;
       throbber.style.left = `${throbberPosition * 100}%`;
-      const computedStyle = window.getComputedStyle(target);
-      for (let propertyName in properties) {
+      const computedStyle = window.getComputedStyle(context.target);
+      for (let propertyName in context.properties) {
         const value = computedStyle[propertyName];
-        const valueElement = $$(`.${propertyName} .value`);
-        if (valueElement) {
-          valueElement.textContent = value;
+        const valueEL = valueELs[propertyName];
+        if (valueEL) {
+          valueEL.textContent = value;
         }
       }
-      if (throbberPosition < 100) {
+      if (animation.currentTime < context.totalTime) {
         window.requestAnimationFrame(observe);
       }
     };
     observe();
-
-    animation.currentTime = 0;
   },
 
   // update ----------------------------------------------------
-  updateCanvas: (id) => {
+  updateCanvas: id => {
     const context = Timewave.contexts[id];
     const properties = context.properties;
     const target = context.target;
@@ -193,7 +207,7 @@ const Timewave = {
     animation.effect.timing.easing = easing;
     Timewave.updateCanvas(id);
     Timewave.updateEasingGraph(id, easing);
-    animation.currentTime = 0;
+    Timewave.replay(id);
   },
   updateEasingGraph: (id, easing) => {
     const svgEL = $(`#${id} .easing svg`);
@@ -271,6 +285,10 @@ const Timewave = {
       }
     };
     Timewave.updateEasing(id, easing);
+  },
+  extractProperties: (id, parentEL) => {
+  },
+  extractProperty: (id, propertyName, parentEL) => {
   },
 
   numberize: value => {
