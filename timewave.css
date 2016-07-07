@@ -19,71 +19,89 @@ body {
   font-family: monospace;
 }
 
-/** timeline **/
-.timeline {
-  background-color: #f8f8f8;
-  border-top: 1px solid #ddd;
-}
-.timeline .ruler {
-  width: 80%;
-  margin-left: 20%;
-  position: relative;
-  border-left: 1px solid #ddd;
-}
-.timeline .ruler label:nth-child(n+2) {
-  position: absolute;
-}
-.timeline .ruler label:nth-child(2) {
-  left: 50%;
-}
-.timeline .ruler label:last-child {
-  right: 0;
-}
-.timeline .ruler label:last-child:after {
-  content: "ms";
-}
-
 /** content **/
 .row {
   clear: both;
   border-top: 1px solid #ddd;
 }
-.row.easing-selector {
-  border-top-width: 0px;
-}
 .row>div {
   float: left;
 }
 .row .left {
-  width: 20%;
+  width: 14em;
   color: #0095dd;
-  padding: 0.5em 0 0.5em 0;
+  background-color: #f8f8f8;
 }
 .row .right {
-  width: calc(80% - 1px);
+  width: calc(100% - 14em - 1px);
   position: relative;
   border-left: 1px solid #ddd;
 }
 
 /** left pane **/
 .left .target {
-  padding-left: 0.5em;
-}
-
-.left .property {
-  display: flex;
+  padding: 0.5em 0 0.5em 0.5em;
 }
 
 .property>.name {
-  padding-left: 1em;
-  width: 5em;
+  padding: 0.3em 0 0.3em 1.5em;
 }
 
-.property>.value {
-  padding-left: 1em;
+/** timeline **/
+.timeline {
+  border-top: 1px solid #ddd;
+  height: 1em;
+}
+.timeline .ruler {
+  width: calc(100% - 14em - 1px);
+  margin-left: calc(14em + 1px);
+  position: relative;
+}
+.timeline .ruler label:nth-child(n+1) {
+  position: absolute;
+  padding-top: 0.2em;
+}
+.timeline .ruler label:first-child {
+  left: -0.25em;
+}
+.timeline .ruler label:last-child:after {
+  content: "ms";
 }
 
-/** right pane **/
+/** keyframes **/
+.row.keyframes {
+  border-top: 1px solid #ddd;
+}
+.row.keyframes .left {
+  background-color: white;
+}
+.row.keyframes .left>div {
+  padding-left: 1em;
+  padding-top: 0.3em;
+  padding-bottom: 0.3em;
+}
+.row.keyframes .right {
+}
+.row.keyframes .ruler {
+  position: relative;
+}
+.row.keyframes .ruler label {
+  position: absolute;
+  padding-top: 0.8em;
+}
+.row.keyframes .ruler label:first-child {
+  left: -0.25em;
+}
+.row.keyframes .ruler label:nth-child(2) {
+  left: 50%;
+}
+.row.keyframes .ruler label:last-child {
+  right: 0;
+}
+
+.row.keyframes .ruler label {
+}
+
 /** result **/
 .row.result .throbber {
   position: absolute;
@@ -99,75 +117,20 @@ body {
 }
 
 /** easing **/
-.row.easing svg {
+.row.easing .graph {
   fill: #eee;
+  stroke: #ddd;
+}
+.row.easing .lines {
+  stroke: #ddd;
+}
+.row.easing .name {
+  padding-left: 1em;
 }
 
-/** easing selector **/
-.easing-selector .right {
-  display: flex;
-}
-.easing-selector .selection {
-  width: 100px;
-  height: 100px;
-  border: 1px solid #0095dd;
-  border-radius: 1em;
-  margin: 0.5em;
-  background-size: cover;
-  background-position: 0% 70%;
-}
-.easing-selector .selection.selected {
-  border-color: pink;
-}
-.easing-selector .linear {
-  background-image: url(resources/linear.png);
-}
-.easing-selector .ease {
-  background-image: url(resources/ease.png);
-}
-.easing-selector .ease-in {
-  background-image: url(resources/ease-in.png);
-}
-.easing-selector .ease-in-out {
-  background-image: url(resources/ease-in-out.png);
-}
-.easing-selector .ease-out {
-  background-image: url(resources/ease-out.png);
-}
-
-/** property **/
-.row.property .right {
-  width: calc(60% - 1px);
-  padding: 1em 10% 0 10%;
-}
-
-.row.property svg {
-  fill: #eee;
-  border-left: 1px dashed #ddd;
-  border-right: 1px dashed #ddd;
-}
-
-.row.property .ruler {
-  position: relative;
-}
-
-.row.property .ruler label:nth-child(n+2) {
-  position: absolute;
-}
-.row.property .ruler label:nth-child(2) {
-  margin-left: -1.25em;
-  left: 50%;
-}
-.row.property .ruler label:last-child {
-  right: 0;
-}
+/** properties **/
 
 /** clonable **/
 #cloneable {
   display: none:
-}
-
-#cloneables .result .right {
-  height: 30px;
-  background-color: black;
 }

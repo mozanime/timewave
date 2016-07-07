@@ -22,10 +22,12 @@
     </section>
 
     <script>
-    const keyframe = { opacity: [1, 0.3, 1], width: ["100px", "0px"] };
-    const timingeffect =
-      { delay: 100, duration: 1000, direction: "alternate-reverse", iterations: 4, fill: "both", easing: "ease-in"};
-    document.getElementById("animatable").animate(keyframe, timingeffect);
+      const keyframe = { opacity: [1, 0.5, 0.1, 1],
+                         width: ["100px", "0px"],
+                         backgroundColor: ["yellow", "lime", "cyan"] };
+      const timingeffect =
+        { delay: 100, duration: 1000, direction: "alternate", iterations: 3, fill: "both", easing: "ease-in"};
+      document.getElementById("animatable").animate(keyframe, timingeffect);
     </script>
 
     <section id="cloneables" style="display: none;">
@@ -37,10 +39,6 @@
         <div class="row result">
           <div class="left">
             <div class="target">target</div>
-            <div class="property opacity">
-              <div class="name">opacity</div>
-              <div class="value">0.5</div>
-            </div>
           </div>
           <div class="right">
             <canvas width="400" height="200"></canvas>
@@ -52,24 +50,23 @@
           <div class="left">
             <div class="property">
               <div class="name">easing</div>
-              <div class="value">linear</div>
             </div>
           </div>
           <div class="right">
-            <svg width="100%" viewBox="0 0 100 20">
-              <path d="M0,20 C0,20 100,0 100,0 L100, 20"></path>
+            <svg width="100%" height="100%" viewBox="0 0 1 1"
+                 preserveAspectRatio="none meet">
+              <path vector-effect="non-scaling-stroke" stroke-width="1" class="graph" d="M0,0 L1,1 L1,0"></path>
+              <path vector-effect="non-scaling-stroke" stroke-width="1" class="lines" d="M0,0 L1,1"></path>
             </svg>
           </div>
         </div>
 
-        <div class="row easing-selector">
-          <div class="left">&nbsp;</div>
+        <div class="row keyframes">
+          <div class="left">
+            <div>keyframes</div>
+          </div>
           <div class="right">
-            <div class="selection linear" data-easing="linear" title="linear"></div>
-            <div class="selection ease" data-easing="ease" title="ease"></div>
-            <div class="selection ease-in" data-easing="ease-in" title="ease-in"></div>
-            <div class="selection ease-in-out" data-easing="ease-in-out" title="ease-in-out"></div>
-            <div class="selection ease-out" data-easing="ease-out" title="ease-out"></div>
+            <div class="ruler"><label>0</label><label>0.5</label><label>1</label></div>
           </div>
         </div>
 
@@ -78,9 +75,9 @@
             <div class="name">opacity</div>
           </div>
           <div class="right">
-            <div class="ruler"><label>0</label><label>0.5</label><label>1.0</label></div>
-            <svg width="100%" viewBox="0 0 100 30">
-              <path d="M0,30 C0,30 100,0 100,0 L100, 30"></path>
+            <svg width="100%" height="100%" viewBox="0 0 1 1"
+                 preserveAspectRatio="none meet">
+              <path vector-effect="non-scaling-stroke" stroke-width="1" d="M0,0 L1,0 L1,1 L0,1 L0,0"></path>
             </svg>
           </div>
         </div>
