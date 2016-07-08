@@ -117,12 +117,23 @@ body {
 }
 
 /** easing **/
+.row.easing svg {
+  width: 110%;
+  height: 200%;
+  position: relative;
+  top: -50%;
+  left: -10%;
+}
 .row.easing .graph {
   fill: #eee;
   stroke: #ddd;
 }
 .row.easing .lines {
   stroke: #ddd;
+}
+.row.easing .controls ellipse {
+  stroke: gray;
+  fill: white;
 }
 .row.easing .name {
   padding-left: 1em;
