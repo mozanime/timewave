@@ -252,7 +252,7 @@ const Timewave = {
       const cloned = propertyEL.cloneNode(true);
       cloned.classList.add(propertyName);
       const propertyNameEL = cloned.querySelector(".name");
-      propertyNameEL.textContent = propertyName;
+      propertyNameEL.textContent = Timewave.idlToProperty(propertyName);
       const leftEL = propertyEL.querySelector(".left");
       cloned.querySelector(".right").style.height = `${leftEL.clientHeight}px`;
 
@@ -457,14 +457,45 @@ const Timewave = {
         const r = Number(rgb[1]);
         const g = Number(rgb[2]);
         const b = Number(rgb[3]);
-        return r * 255 * 255 + g * 255 * b;
-        break;
+        const hsl = Timewave.rgbToHSL(r, g, b);
+        return hsl.h + hsl.s + hsl.l;
       }
       default : {
         break;
       }
     }
     return Number(value.replace(/[A-Za-z]+/, ""));
+  },
+
+  idlToProperty: idl => {
+    if (idl == "cssFloat") {
+      return "float";
+    }
+    return idl.replace(/([A-Z])/, (str, group) => {
+      return `-${group.toLowerCase()}`;
+    });
+  },
+
+  rgbToHSL: (r, g, b) => {
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const hsl = { "h": 0, "s": 0, "l": (max + min) / 2 };
+    if (max != min) {
+      if (max == r) hsl.h = 60 * (g - b) / (max-min);
+      if (max == g) hsl.h = 60 * (b - r) / (max-min) + 120;
+      if (max == b) hsl.h = 60 * (r - g) / (max-min) + 240;
+      if (hsl.l <= 127){
+        hsl.s = (max - min) / (max + min);
+      }else{
+        hsl.s = (max - min) / (510 - max - min);
+      }
+    }
+    if (hsl.h < 0){
+      hsl.h = hsl.h + 360;
+    }
+    hsl.s =  hsl.s * 100;
+    hsl.l =  (hsl.l / 255) * 100;
+    return hsl;
   },
 
   getMinMax: values => {
