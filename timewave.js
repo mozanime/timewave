@@ -11,6 +11,9 @@ const $ = (selector) => {
 
 const Timewave = {
   init: () => {
+    // new canvas to create cached image
+    Timewave.canvas = $("#cloneables canvas").cloneNode();
+
     Timewave.contexts = {};
     Timewave.buildAll();
   },
@@ -106,6 +109,7 @@ const Timewave = {
     Timewave.contexts[animation.id] = context;
 
     Timewave.updateTimeline(animation.id);
+    Timewave.buildPropertiesImage(animation.id);
     Timewave.updateCanvas(animation.id);
 
     // interaction
@@ -114,6 +118,54 @@ const Timewave = {
     //});
 
     Timewave.replay(animation.id);
+  },
+  buildPropertiesImage: id => {
+    const context = Timewave.contexts[id];
+    const properties = context.properties;
+    Object.keys(properties).forEach(propertyName => {
+      Timewave.buildPropertyImage(id, propertyName);
+    });
+  },
+  buildPropertyImage: (id, propertyName) => {
+    const context = Timewave.contexts[id];
+    const property = context.properties[propertyName];
+    const target = context.target;
+    const animation = target.getAnimations({ id: id })[0];
+    const canvas = Timewave.canvas;
+    //const canvas = $(`#${id} canvas`);
+    const canvasContext = canvas.getContext("2d");
+    const width = canvas.width;
+    const height = canvas.height;
+    const xrate = context.resultTotalTime / width;
+    canvasContext.clearRect(0, 0, width, height);
+    for (let x = 0; x < width; x++) {
+      const currentTime = x * xrate;
+      animation.currentTime = currentTime;
+      const computedStyle = window.getComputedStyle(target);
+      switch (propertyName) {
+        case "color" :
+        case "backgroundColor" : {
+          canvasContext.strokeStyle = computedStyle[propertyName];
+          break;
+        }
+        case "opacity" : {
+          canvasContext.globalAlpha = computedStyle[propertyName];
+        }
+        default : {
+          canvasContext.strokeStyle = COLORS[propertyName];
+        }
+      }
+      const value =
+        Timewave.numberize(propertyName, computedStyle[propertyName]);
+      canvasContext.beginPath();
+      canvasContext.moveTo(x, height);
+      canvasContext.lineTo(x, height - (value - property.min) * property.yrate);
+      canvasContext.stroke();
+    }
+    if (!property.image) {
+      property.image = new Image();
+    }
+    property.image.src = canvas.toDataURL("image/png");
   },
 
   // update ----------------------------------------------------
@@ -144,7 +196,6 @@ const Timewave = {
       label.style.left = `${ value / context.resultTotalTime * 100 }%`;
     }
   },
-
   updateCanvas: (id, focus) => {
     const context = Timewave.contexts[id];
     const properties = context.properties;
@@ -152,51 +203,26 @@ const Timewave = {
     const animation = target.getAnimations({ id: id })[0];
     const canvas = $(`#${id} canvas`);
     const canvasContext = canvas.getContext("2d");
-
     const height = canvas.height;
     const width = canvas.width;
 
-    const xrate = context.resultTotalTime / width;
-    let propertyNames;
+    const propertyNames = focus ? [focus] : Object.keys(properties);
     if (!focus) {
       canvasContext.globalAlpha = 1;
       canvasContext.fillStyle = "white";
       canvasContext.fillRect(0, 0, width, height);
-      propertyNames = Object.keys(properties);
-    } else {
-      propertyNames = [focus];
     }
-    for (let x = 0; x < width; x++) {
-      const currentTime = x * xrate;
-      animation.currentTime = currentTime;
-      const computedStyle = window.getComputedStyle(target);
-      propertyNames.forEach(propertyName => {
-        canvasContext.globalAlpha = 1;
-        switch (propertyName) {
-          case "color" :
-          case "backgroundColor" : {
-            canvasContext.strokeStyle = computedStyle[propertyName];
-            break;
-          }
-          case "opacity" : {
-            canvasContext.globalAlpha = computedStyle[propertyName];
-          }
-          default : {
-            canvasContext.strokeStyle = COLORS[propertyName];
-          }
-        }
-        const value =
-          Timewave.numberize(propertyName, computedStyle[propertyName]);
-        const property = properties[propertyName];
-        canvasContext.beginPath();
-        canvasContext.moveTo(x, height);
-        canvasContext.lineTo(x,
-                             height - (value - property.min) * property.yrate);
-        canvasContext.stroke();
-      });
-    }
+    propertyNames.forEach(propertyName => {
+      const property = context.properties[propertyName];
+      if (property.image.complete) {
+        canvasContext.drawImage(property.image, 0, 0);
+      } else {
+        property.image.onload = () => {
+          canvasContext.drawImage(property.image, 0, 0);
+        };
+      }
+    });
   },
-
   updateEasing: id => {
     const svgEL = $(`#${id} .easing svg`);
     const context = Timewave.contexts[id];
@@ -250,7 +276,8 @@ const Timewave = {
            (direction === "alternate-reverse" && count % 2 === 1);
   },
 
-  addEasingControlListener: (id, ellipseEL, svgEL, listener) => {
+  addEasingControlListener: (id, ellipseEL, svgEL,
+                             progressListener, completeListener) => {
     const mousemoveListener = e => {
       const context = Timewave.contexts[id];
       const widthSVG =
@@ -260,11 +287,19 @@ const Timewave = {
       let x = mousex < 0 ? 0 : mousex / svgEL.parentNode.clientWidth;
       ellipseEL.setAttribute("cx", x);
       const time = x * context.resultTotalTime;
-      listener(time);
+      progressListener(time);
     };
     const mouseupListener = e => {
       svgEL.removeEventListener("mousemove", mousemoveListener);
       window.removeEventListener("mouseup", mouseupListener);
+      const context = Timewave.contexts[id];
+      const widthSVG =
+              svgEL.viewBox.baseVal.width * svgEL.parentNode.clientWidth;
+      const diff = widthSVG - svgEL.parentNode.clientWidth;
+      const mousex = e.layerX - diff;
+      let x = mousex < 0 ? 0 : mousex / svgEL.parentNode.clientWidth;
+      const time = x * context.resultTotalTime;
+      completeListener(time);
     };
     ellipseEL.addEventListener("mousedown", e => {
       svgEL.addEventListener("mousemove", mousemoveListener);
@@ -322,20 +357,24 @@ const Timewave = {
     Timewave.setSuitableR(durationEL, svgEL, rx, ry);
 
     // events
+    const completeListener = time => {
+      Timewave.updateTimeline(id);
+      Timewave.buildPropertiesImage(id);
+      Timewave.updateCanvas(id);
+      Timewave.updateEasing(id);
+    };
     Timewave.addEasingControlListener(id, delayEL, svgEL, time => {
       animation.effect.timing.delay = time;
       const durationx = (time + animation.effect.timing.duration) * xrate;
       durationEL.setAttribute("cx", durationx);
       Timewave.updateTimeline(id);
-      Timewave.updateCanvas(id);
       Timewave.updateEasing(id);
-    });
+    }, completeListener);
     Timewave.addEasingControlListener(id, durationEL, svgEL, time => {
       animation.effect.timing.duration = time - animation.effect.timing.delay;
       Timewave.updateTimeline(id);
-      Timewave.updateCanvas(id);
       Timewave.updateEasing(id);
-    });
+    }, completeListener);
     window.addEventListener("resize", e => {
       const ellipseELs = controlsEL.querySelectorAll("ellipse");
       for (let ellipseEL of ellipseELs) {
