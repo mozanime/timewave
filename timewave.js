@@ -24,7 +24,7 @@ const Timewave = {
       Timewave.build(animation);
     });
   },
-  build: (animation) => {
+  build: animation => {
     const animationEL = $("#cloneables .animation").cloneNode(true);
     animationEL.id = animation.id;
     $("#animations").appendChild(animationEL);
@@ -117,7 +117,7 @@ const Timewave = {
   },
 
   // update ----------------------------------------------------
-  updateTimeline: (id) => {
+  updateTimeline: id => {
     const timelineEL = $(`#${id} .timeline`);
     const context = Timewave.contexts[id];
     const animation = context.target.getAnimations({ id: id })[0];
@@ -186,7 +186,7 @@ const Timewave = {
           }
         }
         const value =
-                Timewave.numberize(propertyName, computedStyle[propertyName]);
+          Timewave.numberize(propertyName, computedStyle[propertyName]);
         const property = properties[propertyName];
         canvasContext.beginPath();
         canvasContext.moveTo(x, height);
@@ -197,7 +197,7 @@ const Timewave = {
     }
   },
 
-  updateEasing: (id) => {
+  updateEasing: id => {
     const svgEL = $(`#${id} .easing svg`);
     const context = Timewave.contexts[id];
     const animation = context.target.getAnimations({ id: id })[0];
