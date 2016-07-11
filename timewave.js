@@ -4,6 +4,7 @@ const COLORS = {
 }
 
 const COLOR_REGEX = /^rgb\((\d+), (\d+), (\d+)\)$/;
+const CONTROL_BAR_WIDTH = 10;
 
 const $ = (selector) => {
   return document.querySelector(selector);
@@ -13,7 +14,6 @@ const Timewave = {
   init: () => {
     // new canvas to create cached image
     Timewave.canvas = $("#cloneables canvas").cloneNode();
-
     Timewave.contexts = {};
     Timewave.buildAll();
   },
@@ -27,6 +27,7 @@ const Timewave = {
       Timewave.build(animation);
     });
   },
+
   build: animation => {
     const animationEL = $("#cloneables .animation").cloneNode(true);
     animationEL.id = animation.id;
@@ -119,6 +120,7 @@ const Timewave = {
 
     Timewave.replay(animation.id);
   },
+
   buildPropertiesImage: id => {
     const context = Timewave.contexts[id];
     const properties = context.properties;
@@ -126,13 +128,13 @@ const Timewave = {
       Timewave.buildPropertyImage(id, propertyName);
     });
   },
+
   buildPropertyImage: (id, propertyName) => {
     const context = Timewave.contexts[id];
     const property = context.properties[propertyName];
     const target = context.target;
     const animation = target.getAnimations({ id: id })[0];
     const canvas = Timewave.canvas;
-    //const canvas = $(`#${id} canvas`);
     const canvasContext = canvas.getContext("2d");
     const width = canvas.width;
     const height = canvas.height;
@@ -196,6 +198,7 @@ const Timewave = {
       label.style.left = `${ value / context.resultTotalTime * 100 }%`;
     }
   },
+
   updateCanvas: (id, focus) => {
     const context = Timewave.contexts[id];
     const properties = context.properties;
@@ -212,17 +215,25 @@ const Timewave = {
       canvasContext.fillStyle = "white";
       canvasContext.fillRect(0, 0, width, height);
     }
-    propertyNames.forEach(propertyName => {
+
+    (paint = index => {
+      if (index >= propertyNames.length) {
+        return;
+      }
+      const propertyName = propertyNames[index];
       const property = context.properties[propertyName];
       if (property.image.complete) {
         canvasContext.drawImage(property.image, 0, 0);
+        paint(index + 1);
       } else {
         property.image.onload = () => {
           canvasContext.drawImage(property.image, 0, 0);
+          paint(index + 1);
         };
       }
-    });
+    })(0);
   },
+
   updateEasing: id => {
     const svgEL = $(`#${id} .easing svg`);
     const context = Timewave.contexts[id];
@@ -270,50 +281,6 @@ const Timewave = {
     svgEL.querySelector(".lines").setAttribute("d", dlines);
   },
 
-  isForwading: (direction, count) => {
-    return direction === "normal" ||
-           (direction === "alternate" && count % 2 === 0) ||
-           (direction === "alternate-reverse" && count % 2 === 1);
-  },
-
-  addEasingControlListener: (id, ellipseEL, svgEL,
-                             progressListener, completeListener) => {
-    const mousemoveListener = e => {
-      const context = Timewave.contexts[id];
-      const widthSVG =
-              svgEL.viewBox.baseVal.width * svgEL.parentNode.clientWidth;
-      const diff = widthSVG - svgEL.parentNode.clientWidth;
-      const mousex = e.layerX - diff;
-      let x = mousex < 0 ? 0 : mousex / svgEL.parentNode.clientWidth;
-      ellipseEL.setAttribute("cx", x);
-      const time = x * context.resultTotalTime;
-      progressListener(time);
-    };
-    const mouseupListener = e => {
-      svgEL.removeEventListener("mousemove", mousemoveListener);
-      window.removeEventListener("mouseup", mouseupListener);
-      const context = Timewave.contexts[id];
-      const widthSVG =
-              svgEL.viewBox.baseVal.width * svgEL.parentNode.clientWidth;
-      const diff = widthSVG - svgEL.parentNode.clientWidth;
-      const mousex = e.layerX - diff;
-      let x = mousex < 0 ? 0 : mousex / svgEL.parentNode.clientWidth;
-      const time = x * context.resultTotalTime;
-      completeListener(time);
-    };
-    ellipseEL.addEventListener("mousedown", e => {
-      svgEL.addEventListener("mousemove", mousemoveListener);
-      window.addEventListener("mouseup", mouseupListener);
-    });
-  },
-
-  setSuitableR: (target, svgEL, rx, ry) => {
-    const suitableRx = 1 / svgEL.parentNode.clientWidth * rx;
-    const suitableRy = 1 / svgEL.parentNode.clientHeight * ry;
-    target.setAttribute("rx", suitableRx);
-    target.setAttribute("ry", suitableRy);
-  },
-
   // extract ----------------------------------------------------
   extract: id => {
     Timewave.extractEasing(id);
@@ -326,61 +293,7 @@ const Timewave = {
     const leftEL = $(`#${id} .row.easing .left`);
     $(`#${id} .row.easing .right`).style.height = `${leftEL.clientHeight}px`;
     Timewave.updateEasing(id, animation.effect.timing.easing);
-    // control-points for just first iteration
-    const svgEL = $(`#${id} .easing svg`);
-    const context = Timewave.contexts[id];
-    const width =
-      1 / context.resultTotalTime * context.totalTime;
-    const height = 1;
-    const xrate = width / context.totalTime;
-    const delayx = animation.effect.timing.delay * xrate;
-
-    const isForwading =
-            Timewave.isForwading(animation.effect.timing.direction, 0);
-
-    const controlsEL = svgEL.querySelector(".controls");
-    const delayEL = controlsEL.querySelector(".delay");
-    const durationEL = controlsEL.querySelector(".duration");
-    const rx = Number(delayEL.getAttribute("rx"));
-    const ry = Number(delayEL.getAttribute("ry"));
-    delayEL.setAttribute("cx", delayx);
-    Timewave.setSuitableR(delayEL, svgEL, rx, ry);
-    durationEL.setAttribute("cx",
-                            delayx + animation.effect.timing.duration * xrate);
-    if (isForwading) {
-      delayEL.setAttribute("cy", height);
-      durationEL.setAttribute("cy", 0);
-    } else {
-      delayEL.setAttribute("cy", 0);
-      durationEL.setAttribute("cy", height);
-    }
-    Timewave.setSuitableR(durationEL, svgEL, rx, ry);
-
-    // events
-    const completeListener = time => {
-      Timewave.updateTimeline(id);
-      Timewave.buildPropertiesImage(id);
-      Timewave.updateCanvas(id);
-      Timewave.updateEasing(id);
-    };
-    Timewave.addEasingControlListener(id, delayEL, svgEL, time => {
-      animation.effect.timing.delay = time;
-      const durationx = (time + animation.effect.timing.duration) * xrate;
-      durationEL.setAttribute("cx", durationx);
-      Timewave.updateTimeline(id);
-      Timewave.updateEasing(id);
-    }, completeListener);
-    Timewave.addEasingControlListener(id, durationEL, svgEL, time => {
-      animation.effect.timing.duration = time - animation.effect.timing.delay;
-      Timewave.updateTimeline(id);
-      Timewave.updateEasing(id);
-    }, completeListener);
-    window.addEventListener("resize", e => {
-      const ellipseELs = controlsEL.querySelectorAll("ellipse");
-      for (let ellipseEL of ellipseELs) {
-        Timewave.setSuitableR(ellipseEL, svgEL, rx, ry);
-      };
-    });
+    Timewave.addEasingControls(id);
   },
 
   extractProperties: id => {
@@ -513,9 +426,133 @@ const Timewave = {
     Timewave.startObserver(id);
   },
 
+  isForwading: (direction, count) => {
+    return direction === "normal" ||
+           (direction === "alternate" && count % 2 === 0) ||
+           (direction === "alternate-reverse" && count % 2 === 1);
+  },
+
+  addEasingControls: id => {
+    // control-points for just first iteration
+    const context = Timewave.contexts[id];
+    const animation = context.target.getAnimations({ id: id })[0];
+    const svgEL = $(`#${id} .easing svg`);
+    const controlsEL = svgEL.querySelector(".controls");
+    const durationEL = controlsEL.querySelector(".duration");
+    {
+      const width = 1 / context.resultTotalTime * context.totalTime;
+      const height = 1;
+      const xrate = width / context.totalTime;
+      const delayx = animation.effect.timing.delay * xrate;
+      const durationx = animation.effect.timing.duration * xrate;
+      const iterationCount = Timewave.getDisplayableIterationCount(animation);
+      durationEL.setAttribute("x", delayx + durationx * iterationCount);
+      Timewave.setPixelWidth(durationEL, svgEL, CONTROL_BAR_WIDTH);
+      Timewave.adjustEasingControlBar(controlsEL,
+                                      Number(durationEL.getAttribute("width")));
+    }
+
+    const update = () => {
+      Timewave.updateTimeline(id);
+      Timewave.buildPropertiesImage(id);
+      Timewave.updateCanvas(id);
+      Timewave.updateEasing(id);
+    };
+
+    const calc = e => {
+      const context = Timewave.contexts[id];
+      const widthSVG =
+        svgEL.viewBox.baseVal.width * svgEL.parentNode.clientWidth;
+      const diff = widthSVG - svgEL.parentNode.clientWidth;
+      const mousex = e.layerX - diff;
+      const x = mousex < 0 ? 0 : mousex / svgEL.parentNode.clientWidth;
+      const time = x * context.resultTotalTime;
+      return { x: x, time: time };
+    };
+
+    // delay --------
+    const delayOriginalContext = {};
+    const delayMousemoveListener = e => {
+      const xAndTime = calc(e);
+      const diffTime = xAndTime.time - delayOriginalContext.xAndTime.time;
+      animation.effect.timing.delay = delayOriginalContext.delay + diffTime;
+      const diffX = xAndTime.x - delayOriginalContext.xAndTime.x;
+      durationEL.setAttribute("x", delayOriginalContext.durationX + diffX);
+      Timewave.updateTimeline(id);
+      Timewave.updateEasing(id);
+    };
+    const delayMouseupListener = e => {
+      svgEL.removeEventListener("mousemove", delayMousemoveListener);
+      window.removeEventListener("mouseup", delayMouseupListener);
+      svgEL.setAttribute("cursor", delayOriginalContext.cursor);
+      update();
+    };
+    svgEL.addEventListener("mousedown", e => {
+      if (e.target === durationEL) {
+        return;
+      }
+      delayOriginalContext.xAndTime = calc(e);
+      delayOriginalContext.durationX = Number(durationEL.getAttribute("x"));
+      delayOriginalContext.delay = animation.effect.timing.delay;
+      delayOriginalContext.cursor = svgEL.getAttribute("cursor");
+      svgEL.setAttribute("cursor", "grabbing");
+      svgEL.addEventListener("mousemove", delayMousemoveListener);
+      window.addEventListener("mouseup", delayMouseupListener);
+    });
+
+    // duration --------
+    const durationOriginalContext = {};
+    const durationMousemoveListener = e => {
+      const xAndTime = calc(e);
+      durationEL.setAttribute("x", xAndTime.x);
+      const diffTime = xAndTime.time - durationOriginalContext.xAndTime.time;
+      const iterationCount = Timewave.getDisplayableIterationCount(animation);
+      animation.effect.timing.duration =
+        durationOriginalContext.duration + diffTime / iterationCount;
+      Timewave.updateTimeline(id);
+      Timewave.updateEasing(id);
+    };
+    const durationMouseupListener = e => {
+      svgEL.removeEventListener("mousemove", durationMousemoveListener);
+      window.removeEventListener("mouseup", durationMouseupListener);
+      svgEL.setAttribute("cursor", durationOriginalContext.cursor);
+      update();
+    };
+    durationEL.addEventListener("mousedown", e => {
+      svgEL.addEventListener("mousemove", durationMousemoveListener);
+      window.addEventListener("mouseup", durationMouseupListener);
+      durationOriginalContext.cursor = svgEL.getAttribute("cursor");
+      durationOriginalContext.xAndTime = calc(e);
+      durationOriginalContext.duration = animation.effect.timing.duration;
+      svgEL.setAttribute("cursor", durationEL.getAttribute("cursor"));
+    });
+
+    // resize ----------------
+    window.addEventListener("resize", e => {
+      Timewave.setSuitableWidth(durationEL, svgEL, CONTROL_BAR_WIDTH);
+      Timewave.adjustEasingControlBar(controlsEL,
+                                      Number(durationEL.getAttribute("width")));
+    });
+  },
+
+  setPixelR: (target, svgEL, rx, ry) => {
+    const suitableRx = 1 / svgEL.parentNode.clientWidth * rx;
+    const suitableRy = 1 / svgEL.parentNode.clientHeight * ry;
+    target.setAttribute("rx", suitableRx);
+    target.setAttribute("ry", suitableRy);
+  },
+
+  setPixelWidth: (target, svgEL, width) => {
+    const suitableWidth = 1 / svgEL.parentNode.clientWidth * width;
+    target.setAttribute("width", suitableWidth);
+  },
+
+  adjustEasingControlBar: (target, width) => {
+    target.setAttribute("transform", `translate(${-width/2}, 0)`);
+  },
+
   getDisplayableIterationCount: animation => {
-    return animation.effect.timing.iterations === Infinity ||
-           animation.effect.timing.iterations > 3
+    return animation.effect.timing.iterations === Infinity
            ? 3 : animation.effect.timing.iterations;
   },
 
