@@ -172,7 +172,6 @@ const Timewave = {
       const computedStyle = window.getComputedStyle(target);
       propertyNames.forEach(propertyName => {
         canvasContext.globalAlpha = 1;
-        canvasContext.strokeStyle = COLORS[propertyName];
         switch (propertyName) {
           case "color" :
           case "backgroundColor" : {
@@ -181,7 +180,9 @@ const Timewave = {
           }
           case "opacity" : {
             canvasContext.globalAlpha = computedStyle[propertyName];
-            break;
+          }
+          default : {
+            canvasContext.strokeStyle = COLORS[propertyName];
           }
         }
         const value =
