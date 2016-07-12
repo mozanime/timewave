@@ -470,7 +470,6 @@ const Timewave = {
   },
 
   addEasingControls: id => {
-    // control-points for just first iteration
     const context = Timewave.contexts[id];
     const animation = context.target.getAnimations({ id: id })[0];
     const svgEL = $(`#${id} .easing svg`);
