@@ -117,12 +117,14 @@ const Timewave = {
     Timewave.buildPropertiesImage(animation.id);
     Timewave.updateCanvas(animation.id);
 
-    // interaction
-    //completeGraphEL.addEventListener("click", () => {
-      Timewave.extract(animation.id);
-    //});
+    Timewave.buildEasing(animation.id);
+    Timewave.buildProperties(animation.id);
 
     Timewave.replay(animation.id);
+
+    //completeGraphEL.addEventListener("click", () => {
+    //});
+
   },
 
   buildPropertiesImage: id => {
@@ -172,6 +174,139 @@ const Timewave = {
       property.image = new Image();
     }
     property.image.src = canvas.toDataURL("image/png");
+  },
+
+  buildEasing: id => {
+    const target = Timewave.contexts[id].target;
+    const animation = target.getAnimations({ id: id })[0];
+    const leftEL = $(`#${id} .row.easing .left`);
+    $(`#${id} .row.easing .right`).style.height = `${leftEL.clientHeight}px`;
+    Timewave.updateEasing(id, animation.effect.timing.easing);
+    Timewave.addEasingControls(id);
+  },
+
+  buildProperties: id => {
+    const context = Timewave.contexts[id];
+    const properties = context.properties;
+    const animation = context.target.getAnimations({ id: id })[0];
+
+    const propertyEL = $(`#${id} .row.property`);
+    const keyframes = animation.effect.getKeyframes();
+    for (let propertyName in properties) {
+      const cloned = propertyEL.cloneNode(true);
+      cloned.classList.add(propertyName);
+      const propertyNameEL = cloned.querySelector(".name");
+      propertyNameEL.textContent = Timewave.idlToProperty(propertyName);
+      const leftEL = propertyEL.querySelector(".left");
+      cloned.querySelector(".right").style.height = `${leftEL.clientHeight}px`;
+
+      const svgEL = cloned.querySelector("svg");
+      let needOverlap = false;
+      switch (propertyName) {
+        case "opacity": {
+          Timewave.buildOpacity(context, animation, svgEL);
+          needOverlap = true;
+          break;
+        }
+        case "color":
+        case "backgroundColor": {
+          Timewave.buildColor(propertyName, context, animation, svgEL);
+          needOverlap = true;
+          break;
+        }
+      }
+      Timewave.buildProperty(propertyName, context,
+                               animation, svgEL, needOverlap);
+      propertyEL.parentNode.appendChild(cloned);
+    }
+    // remove original
+    propertyEL.parentNode.removeChild(propertyEL);
+  },
+
+  buildProperty: (propertyName, context, animation, svgEL, isOverlap) => {
+    const property = context.properties[propertyName];
+    const keyframes = animation.effect.getKeyframes();
+    const width = svgEL.viewBox.baseVal.width;
+    const height = svgEL.viewBox.baseVal.height;
+    const yrate = height / (property.max - property.min);
+    let d = "";
+    keyframes.forEach((keyframe, i) => {
+      if (keyframe[propertyName]) {
+        d += i === 0 ? "M" : "L";
+        const value = Timewave.numberize(propertyName, keyframe[propertyName]);
+        d += `${keyframe["computedOffset"]},${(property.max - value) * yrate} `;
+      }
+    });
+    d += `L${width},${height} L0,${height}`;
+
+    const pathEL = svgEL.querySelector("path");
+    pathEL.setAttribute("d", d);
+    if (isOverlap) {
+      pathEL.setAttribute("stroke", "#ddd");
+    } else {
+      pathEL.setAttribute("fill", `${COLORS[propertyName]}88`);
+      pathEL.setAttribute("stroke", COLORS[propertyName]);
+    }
+
+    Timewave.addKeyframeControls(propertyName, context, animation, svgEL);
+
+    pathEL.addEventListener("mouseenter", (e) => {
+      Timewave.updateCanvas(animation.id, propertyName);
+    });
+  },
+
+  buildOpacity: (context, animation, svgEL) => {
+    const keyframes = animation.effect.getKeyframes();
+    const defsEL = addChildNS(svgEL, "http://www.w3.org/2000/svg", "defs");
+    const linearGradientEL = addChildNS(defsEL, "http://www.w3.org/2000/svg",
+                                        "linearGradient");
+    linearGradientEL.setAttribute("x1", "0%");
+    linearGradientEL.setAttribute("y1", "0%");
+    linearGradientEL.setAttribute("x2", "100%");
+    linearGradientEL.setAttribute("y2", "0%");
+    const gradientID = `${animation.id}-opacity`;
+    linearGradientEL.setAttribute("id", gradientID);
+
+    const color = COLORS["opacity"];
+    keyframes.forEach(keyframe => {
+      if (keyframe["opacity"]) {
+        const stopEL =
+          addChildNS(linearGradientEL, "http://www.w3.org/2000/svg", "stop");
+        stopEL.setAttribute("offset", keyframe["computedOffset"]);
+        stopEL.setAttribute("stop-color", color);
+        const value = Timewave.numberize("opacity", keyframe["opacity"]);
+        stopEL.setAttribute("stop-opacity", value);
+        linearGradientEL.appendChild(stopEL);
+      }
+    });
+    const pathEL = svgEL.querySelector("path");
+    pathEL.setAttribute("fill", `url(#${gradientID})`);
+    pathEL.setAttribute("stroke", color);
+  },
+
+  buildColor: (propertyName, context, animation, svgEL) => {
+    const keyframes = animation.effect.getKeyframes();
+    const defsEL = addChildNS(svgEL, "http://www.w3.org/2000/svg", "defs");
+    const linearGradientEL = addChildNS(defsEL, "http://www.w3.org/2000/svg",
+                                        "linearGradient");
+    linearGradientEL.setAttribute("x1", "0%");
+    linearGradientEL.setAttribute("y1", "0%");
+    linearGradientEL.setAttribute("x2", "100%");
+    linearGradientEL.setAttribute("y2", "0%");
+    const gradientID = `${animation.id}-${propertyName}`;
+    linearGradientEL.setAttribute("id", gradientID);
+
+    keyframes.forEach(keyframe => {
+      if (keyframe[propertyName]) {
+        const stopEL =
+          addChildNS(linearGradientEL, "http://www.w3.org/2000/svg", "stop");
+        stopEL.setAttribute("offset", keyframe["computedOffset"]);
+        stopEL.setAttribute("stop-color", keyframe[propertyName]);
+        linearGradientEL.appendChild(stopEL);
+      }
+    });
+    const pathEL = svgEL.querySelector("path");
+    pathEL.setAttribute("fill", `url(#${gradientID})`);
   },
 
   // update ----------------------------------------------------
@@ -283,192 +418,7 @@ const Timewave = {
     svgEL.querySelector(".lines").setAttribute("d", dlines);
   },
 
-  isForwading: (direction, count) => {
-    return direction === "normal" ||
-           (direction === "alternate" && count % 2 === 0) ||
-           (direction === "alternate-reverse" && count % 2 === 1);
-  },
-
-  addEasingControlListener: (id, ellipseEL, svgEL, listener) => {
-    const mousemoveListener = e => {
-      const context = Timewave.contexts[id];
-      const widthSVG =
-              svgEL.viewBox.baseVal.width * svgEL.parentNode.clientWidth;
-      const diff = widthSVG - svgEL.parentNode.clientWidth;
-      const mousex = e.layerX - diff;
-      let x = mousex < 0 ? 0 : mousex / svgEL.parentNode.clientWidth;
-      ellipseEL.setAttribute("cx", x);
-      const time = x * context.resultTotalTime;
-      listener(time);
-    };
-    const mouseupListener = e => {
-      svgEL.removeEventListener("mousemove", mousemoveListener);
-      window.removeEventListener("mouseup", mouseupListener);
-    };
-    ellipseEL.addEventListener("mousedown", e => {
-      svgEL.addEventListener("mousemove", mousemoveListener);
-      window.addEventListener("mouseup", mouseupListener);
-    });
-  },
-
-  setSuitableR: (target, svgEL, rx, ry) => {
-    const suitableRx = 1 / svgEL.parentNode.clientWidth * rx;
-    const suitableRy = 1 / svgEL.parentNode.clientHeight * ry;
-    target.setAttribute("rx", suitableRx);
-    target.setAttribute("ry", suitableRy);
-  },
-
-  // extract ----------------------------------------------------
-  extract: id => {
-    Timewave.extractEasing(id);
-    Timewave.extractProperties(id);
-  },
-
-  extractEasing: id => {
-    const target = Timewave.contexts[id].target;
-    const animation = target.getAnimations({ id: id })[0];
-    const leftEL = $(`#${id} .row.easing .left`);
-    $(`#${id} .row.easing .right`).style.height = `${leftEL.clientHeight}px`;
-    Timewave.updateEasing(id, animation.effect.timing.easing);
-    Timewave.addEasingControls(id);
-  },
-
-  extractProperties: id => {
-    const context = Timewave.contexts[id];
-    const properties = context.properties;
-    const animation = context.target.getAnimations({ id: id })[0];
-
-    const propertyEL = $(`#${id} .row.property`);
-    const keyframes = animation.effect.getKeyframes();
-    for (let propertyName in properties) {
-      const cloned = propertyEL.cloneNode(true);
-      cloned.classList.add(propertyName);
-      const propertyNameEL = cloned.querySelector(".name");
-      propertyNameEL.textContent = Timewave.idlToProperty(propertyName);
-      const leftEL = propertyEL.querySelector(".left");
-      cloned.querySelector(".right").style.height = `${leftEL.clientHeight}px`;
-
-      const svgEL = cloned.querySelector("svg");
-      let needOverlap = false;
-      switch (propertyName) {
-        case "opacity": {
-          Timewave.extractOpacity(context, animation, svgEL);
-          needOverlap = true;
-          break;
-        }
-        case "color":
-        case "backgroundColor": {
-          Timewave.extractColor(propertyName, context, animation, svgEL);
-          needOverlap = true;
-          break;
-        }
-      }
-      Timewave.extractProperty(propertyName, context,
-                               animation, svgEL, needOverlap);
-      propertyEL.parentNode.appendChild(cloned);
-    }
-    // remove original
-    propertyEL.parentNode.removeChild(propertyEL);
-  },
-
-  extractProperty: (propertyName, context, animation, svgEL, isOverlap) => {
-    const property = context.properties[propertyName];
-    const keyframes = animation.effect.getKeyframes();
-    const width = svgEL.viewBox.baseVal.width;
-    const height = svgEL.viewBox.baseVal.height;
-    const yrate = height / (property.max - property.min);
-    let d = "";
-    keyframes.forEach((keyframe, i) => {
-      if (keyframe[propertyName]) {
-        d += i === 0 ? "M" : "L";
-        const value = Timewave.numberize(propertyName, keyframe[propertyName]);
-        d += `${keyframe["computedOffset"]},${(property.max - value) * yrate} `;
-      }
-    });
-    d += `L${width},${height} L0,${height}`;
-
-    const pathEL = svgEL.querySelector("path");
-    pathEL.setAttribute("d", d);
-    if (isOverlap) {
-      pathEL.setAttribute("stroke", "#ddd");
-    } else {
-      pathEL.setAttribute("fill", `${COLORS[propertyName]}88`);
-      pathEL.setAttribute("stroke", COLORS[propertyName]);
-    }
-
-    Timewave.addKeyframeControls(propertyName, context, animation, svgEL);
-
-    pathEL.addEventListener("mouseenter", (e) => {
-      Timewave.updateCanvas(animation.id, propertyName);
-    });
-  },
-
-  extractOpacity: (context, animation, svgEL) => {
-    const keyframes = animation.effect.getKeyframes();
-    const defsEL = addChildNS(svgEL, "http://www.w3.org/2000/svg", "defs");
-    const linearGradientEL = addChildNS(defsEL, "http://www.w3.org/2000/svg",
-                                        "linearGradient");
-    linearGradientEL.setAttribute("x1", "0%");
-    linearGradientEL.setAttribute("y1", "0%");
-    linearGradientEL.setAttribute("x2", "100%");
-    linearGradientEL.setAttribute("y2", "0%");
-    const gradientID = `${animation.id}-opacity`;
-    linearGradientEL.setAttribute("id", gradientID);
-
-    const color = COLORS["opacity"];
-    keyframes.forEach(keyframe => {
-      if (keyframe["opacity"]) {
-        const stopEL =
-          addChildNS(linearGradientEL, "http://www.w3.org/2000/svg", "stop");
-        stopEL.setAttribute("offset", keyframe["computedOffset"]);
-        stopEL.setAttribute("stop-color", color);
-        const value = Timewave.numberize("opacity", keyframe["opacity"]);
-        stopEL.setAttribute("stop-opacity", value);
-        linearGradientEL.appendChild(stopEL);
-      }
-    });
-    const pathEL = svgEL.querySelector("path");
-    pathEL.setAttribute("fill", `url(#${gradientID})`);
-    pathEL.setAttribute("stroke", color);
-  },
-
-  extractColor: (propertyName, context, animation, svgEL) => {
-    const keyframes = animation.effect.getKeyframes();
-    const defsEL = addChildNS(svgEL, "http://www.w3.org/2000/svg", "defs");
-    const linearGradientEL = addChildNS(defsEL, "http://www.w3.org/2000/svg",
-                                        "linearGradient");
-    linearGradientEL.setAttribute("x1", "0%");
-    linearGradientEL.setAttribute("y1", "0%");
-    linearGradientEL.setAttribute("x2", "100%");
-    linearGradientEL.setAttribute("y2", "0%");
-    const gradientID = `${animation.id}-${propertyName}`;
-    linearGradientEL.setAttribute("id", gradientID);
-
-    keyframes.forEach(keyframe => {
-      if (keyframe[propertyName]) {
-        const stopEL =
-          addChildNS(linearGradientEL, "http://www.w3.org/2000/svg", "stop");
-        stopEL.setAttribute("offset", keyframe["computedOffset"]);
-        stopEL.setAttribute("stop-color", keyframe[propertyName]);
-        linearGradientEL.appendChild(stopEL);
-      }
-    });
-    const pathEL = svgEL.querySelector("path");
-    pathEL.setAttribute("fill", `url(#${gradientID})`);
-  },
-
-  // other --------------------------------------------------------------
-  replay: id => {
-    Timewave.contexts[id].target.getAnimations({ id: id })[0].currentTime = 0;
-    Timewave.startObserver(id);
-  },
-
-  isForwading: (direction, count) => {
-    return direction === "normal" ||
-           (direction === "alternate" && count % 2 === 0) ||
-           (direction === "alternate-reverse" && count % 2 === 1);
-  },
-
+  // controls ------------------------------------
   addEasingControls: id => {
     const context = Timewave.contexts[id];
     const animation = context.target.getAnimations({ id: id })[0];
@@ -720,6 +670,25 @@ const Timewave = {
         const value = Timewave.numberize(propertyName, keyframe[propertyName]);
       }
     });
+  },
+
+  // other --------------------------------------------------------------
+  replay: id => {
+    Timewave.contexts[id].target.getAnimations({ id: id })[0].currentTime = 0;
+    Timewave.startObserver(id);
+  },
+
+  isForwading: (direction, count) => {
+    return direction === "normal" ||
+           (direction === "alternate" && count % 2 === 0) ||
+           (direction === "alternate-reverse" && count % 2 === 1);
+  },
+
+  setSuitableR: (target, svgEL, rx, ry) => {
+    const suitableRx = 1 / svgEL.parentNode.clientWidth * rx;
+    const suitableRy = 1 / svgEL.parentNode.clientHeight * ry;
+    target.setAttribute("rx", suitableRx);
+    target.setAttribute("ry", suitableRy);
   },
 
   setPixelR: (target, svgEL, r) => {
