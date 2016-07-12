@@ -285,6 +285,41 @@ const Timewave = {
     svgEL.querySelector(".lines").setAttribute("d", dlines);
   },
 
+  isForwading: (direction, count) => {
+    return direction === "normal" ||
+           (direction === "alternate" && count % 2 === 0) ||
+           (direction === "alternate-reverse" && count % 2 === 1);
+  },
+
+  addEasingControlListener: (id, ellipseEL, svgEL, listener) => {
+    const mousemoveListener = e => {
+      const context = Timewave.contexts[id];
+      const widthSVG =
+              svgEL.viewBox.baseVal.width * svgEL.parentNode.clientWidth;
+      const diff = widthSVG - svgEL.parentNode.clientWidth;
+      const mousex = e.layerX - diff;
+      let x = mousex < 0 ? 0 : mousex / svgEL.parentNode.clientWidth;
+      ellipseEL.setAttribute("cx", x);
+      const time = x * context.resultTotalTime;
+      listener(time);
+    };
+    const mouseupListener = e => {
+      svgEL.removeEventListener("mousemove", mousemoveListener);
+      window.removeEventListener("mouseup", mouseupListener);
+    };
+    ellipseEL.addEventListener("mousedown", e => {
+      svgEL.addEventListener("mousemove", mousemoveListener);
+      window.addEventListener("mouseup", mouseupListener);
+    });
+  },
+
+  setSuitableR: (target, svgEL, rx, ry) => {
+    const suitableRx = 1 / svgEL.parentNode.clientWidth * rx;
+    const suitableRy = 1 / svgEL.parentNode.clientHeight * ry;
+    target.setAttribute("rx", suitableRx);
+    target.setAttribute("ry", suitableRy);
+  },
+
   // extract ----------------------------------------------------
   extract: id => {
     Timewave.extractEasing(id);
