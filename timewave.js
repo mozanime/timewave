@@ -1,10 +1,14 @@
 const COLORS = {
   opacity: "#1f77b4",
   width: "#ff7f0e"
-}
+};
 
 const COLOR_REGEX = /^rgb\((\d+), (\d+), (\d+)\)$/;
-const CONTROL_BAR_WIDTH = 10;
+const BEZIER_REGEX =
+  /^cubic-bezier\((-?[\d.]+),\s?(-?[\d.]+),\s?(-?[\d.]+),\s?(-?[\d.]+)\)/;
+
+const EASING_CONTROL_BAR_WIDTH = 10;
+const EASING_CONTROL_POINT_R = 5;
 
 const $ = (selector) => {
   return document.querySelector(selector);
@@ -437,8 +441,58 @@ const Timewave = {
     const context = Timewave.contexts[id];
     const animation = context.target.getAnimations({ id: id })[0];
     const svgEL = $(`#${id} .easing svg`);
-    const controlsEL = svgEL.querySelector(".controls");
-    const durationEL = controlsEL.querySelector(".duration");
+    const adjustorEL = svgEL.querySelector(".duration-control");
+    const durationEL = svgEL.querySelector(".duration");
+    const cp1EL = svgEL.querySelector(".cp1");
+    const cp2EL = svgEL.querySelector(".cp2");
+    const cp1LineEL = svgEL.querySelector(".cp1-line");
+    const cp2LineEL = svgEL.querySelector(".cp2-line");
+
+    const updateEasingControlUI = () => {
+      const width = 1 / context.resultTotalTime * context.totalTime;
+      const height = 1;
+      const xrate = width / context.totalTime;
+      const delayx = animation.effect.timing.delay * xrate;
+      const durationx = animation.effect.timing.duration * xrate;
+      const p =
+        Timewave.getControlPoints(animation.effect.timing.easing,
+                                  durationx, height);
+      let cx1, cy1, cx2, cy2, x1, y1, x2, y2;
+      if (Timewave.isForwading(animation.effect.timing.direction, 0)) {
+        cx1 = delayx + p.cx1;
+        cy1 = p.cy1;
+        cx2 = delayx + p.cx2;
+        cy2 = p.cy2;
+        x1 = delayx;
+        y1 = 1;
+        x2 = delayx + durationx;
+        y2 = 0;
+      } else {
+        cx1 = delayx + durationx - p.cx2;
+        cy1 = p.cy2;
+        cx2 = delayx + durationx - p.cx1;
+        cy2 = p.cy1;
+        x1 = delayx;
+        y1 = 0;
+        x2 = delayx + durationx;
+        y2 = 1;
+      }
+      cp1EL.setAttribute("cx", cx1);
+      cp1EL.setAttribute("cy", cy1);
+      cp2EL.setAttribute("cx", cx2);
+      cp2EL.setAttribute("cy", cy2);
+      Timewave.setPixelR(cp1EL, svgEL, EASING_CONTROL_POINT_R);
+      Timewave.setPixelR(cp2EL, svgEL, EASING_CONTROL_POINT_R);
+      cp1LineEL.setAttribute("x1", x1);
+      cp1LineEL.setAttribute("y1", y1);
+      cp1LineEL.setAttribute("x2", cx1);
+      cp1LineEL.setAttribute("y2", cy1);
+      cp2LineEL.setAttribute("x1", x2);
+      cp2LineEL.setAttribute("y1", y2);
+      cp2LineEL.setAttribute("x2", cx2);
+      cp2LineEL.setAttribute("y2", cy2);
+    };
+
     {
       const width = 1 / context.resultTotalTime * context.totalTime;
       const height = 1;
@@ -447,9 +501,12 @@ const Timewave = {
       const durationx = animation.effect.timing.duration * xrate;
       const iterationCount = Timewave.getDisplayableIterationCount(animation);
       durationEL.setAttribute("x", delayx + durationx * iterationCount);
-      Timewave.setPixelWidth(durationEL, svgEL, CONTROL_BAR_WIDTH);
-      Timewave.adjustEasingControlBar(controlsEL,
+      Timewave.setPixelWidth(durationEL, svgEL, EASING_CONTROL_BAR_WIDTH);
+      Timewave.adjustEasingControlBar(adjustorEL,
                                       Number(durationEL.getAttribute("width")));
+      Timewave.setPixelR(cp1EL, svgEL, EASING_CONTROL_POINT_R);
+      Timewave.setPixelR(cp2EL, svgEL, EASING_CONTROL_POINT_R);
+      updateEasingControlUI();
     }
 
     const update = () => {
@@ -459,25 +516,40 @@ const Timewave = {
       Timewave.updateEasing(id);
     };
 
-    const calc = e => {
+    const toTimewavePosition = e => {
       const context = Timewave.contexts[id];
       const widthSVG =
         svgEL.viewBox.baseVal.width * svgEL.parentNode.clientWidth;
-      const diff = widthSVG - svgEL.parentNode.clientWidth;
-      const mousex = e.layerX - diff;
-      const x = mousex < 0 ? 0 : mousex / svgEL.parentNode.clientWidth;
+      const heightSVG =
+        svgEL.viewBox.baseVal.height * svgEL.parentNode.clientHeight;
+      const diffx = widthSVG - svgEL.parentNode.clientWidth;
+      const diffy = heightSVG - svgEL.parentNode.clientHeight;
+      const mousex = e.layerX - diffx;
+      const mousey = e.layerY - diffy;
+      const x = mousex / svgEL.parentNode.clientWidth;
+      const y = mousey / svgEL.parentNode.clientHeight;
       const time = x * context.resultTotalTime;
-      return { x: x, time: time };
+      return { x: x, y: y, time: time };
     };
 
     // delay --------
     const delayOriginalContext = {};
     const delayMousemoveListener = e => {
-      const xAndTime = calc(e);
-      const diffTime = xAndTime.time - delayOriginalContext.xAndTime.time;
+      const tPosition = toTimewavePosition(e);
+      const diffTime =
+        tPosition.time - delayOriginalContext.tPosition.time;
       animation.effect.timing.delay = delayOriginalContext.delay + diffTime;
-      const diffX = xAndTime.x - delayOriginalContext.xAndTime.x;
+      const diffX =
+        tPosition.x - delayOriginalContext.tPosition.x;
       durationEL.setAttribute("x", delayOriginalContext.durationX + diffX);
+      const cp1X = delayOriginalContext.cp1X + diffX;
+      const cp2X = delayOriginalContext.cp2X + diffX;
+      cp1EL.setAttribute("cx", cp1X);
+      cp2EL.setAttribute("cx", cp2X);
+      cp1LineEL.setAttribute("x1", delayOriginalContext.cp1LineX + diffX);
+      cp1LineEL.setAttribute("x2", cp1X);
+      cp2LineEL.setAttribute("x1", delayOriginalContext.cp2LineX + diffX);
+      cp2LineEL.setAttribute("x2", cp2X);
       Timewave.updateTimeline(id);
       Timewave.updateEasing(id);
     };
@@ -488,11 +560,15 @@ const Timewave = {
       update();
     };
     svgEL.addEventListener("mousedown", e => {
-      if (e.target === durationEL) {
+      if (e.target === durationEL || e.target === cp1EL || e.target === cp2EL) {
         return;
       }
-      delayOriginalContext.xAndTime = calc(e);
+      delayOriginalContext.tPosition = toTimewavePosition(e);
       delayOriginalContext.durationX = Number(durationEL.getAttribute("x"));
+      delayOriginalContext.cp1X = Number(cp1EL.getAttribute("cx"));
+      delayOriginalContext.cp2X = Number(cp2EL.getAttribute("cx"));
+      delayOriginalContext.cp1LineX = Number(cp1LineEL.getAttribute("x1"));
+      delayOriginalContext.cp2LineX = Number(cp2LineEL.getAttribute("x1"));
       delayOriginalContext.delay = animation.effect.timing.delay;
       delayOriginalContext.cursor = svgEL.getAttribute("cursor");
       svgEL.setAttribute("cursor", "grabbing");
@@ -503,12 +579,14 @@ const Timewave = {
     // duration --------
     const durationOriginalContext = {};
     const durationMousemoveListener = e => {
-      const xAndTime = calc(e);
-      durationEL.setAttribute("x", xAndTime.x);
-      const diffTime = xAndTime.time - durationOriginalContext.xAndTime.time;
+      const tPosition = toTimewavePosition(e);
+      const diffTime = tPosition.time - durationOriginalContext.tPosition.time;
       const iterationCount = Timewave.getDisplayableIterationCount(animation);
       animation.effect.timing.duration =
         durationOriginalContext.duration + diffTime / iterationCount;
+      const diffX = tPosition.x - durationOriginalContext.tPosition.x;
+      durationEL.setAttribute("x", durationOriginalContext.durationX + diffX);
+      updateEasingControlUI();
       Timewave.updateTimeline(id);
       Timewave.updateEasing(id);
     };
@@ -522,22 +600,75 @@ const Timewave = {
       svgEL.addEventListener("mousemove", durationMousemoveListener);
       window.addEventListener("mouseup", durationMouseupListener);
       durationOriginalContext.cursor = svgEL.getAttribute("cursor");
-      durationOriginalContext.xAndTime = calc(e);
+      durationOriginalContext.tPosition = toTimewavePosition(e);
       durationOriginalContext.duration = animation.effect.timing.duration;
+      durationOriginalContext.durationX = Number(durationEL.getAttribute("x"));
       svgEL.setAttribute("cursor", durationEL.getAttribute("cursor"));
     });
 
+    // easing -----------------------------
+    const easingOriginalContext = {};
+    const updateEasing = () => {
+      const width = 1 / context.resultTotalTime * context.totalTime;
+      const height = 1;
+      const xrate = width / context.totalTime;
+      const delayx = animation.effect.timing.delay * xrate;
+      const durationx = animation.effect.timing.duration * xrate;
+      const cp1x = (Number(cp1EL.getAttribute("cx")) - delayx) / durationx;
+      const cp1y = 1 - Number(cp1EL.getAttribute("cy"));
+      const cp2x = (Number(cp2EL.getAttribute("cx")) - delayx) / durationx;
+      const cp2y = 1 - Number(cp2EL.getAttribute("cy"));
+      animation.effect.timing.easing =
+        `cubic-bezier(${cp1x}, ${cp1y}, ${cp2x}, ${cp2y})`;
+    };
+    const easingMousemoveListener = e => {
+      const tPosition = toTimewavePosition(e);
+      const diffX = tPosition.x - easingOriginalContext.tPosition.x;
+      const diffY = tPosition.y - easingOriginalContext.tPosition.y;
+      const cx = easingOriginalContext.x + diffX;
+      const cy = easingOriginalContext.y + diffY;
+      easingOriginalContext.target.setAttribute("cx", cx);
+      easingOriginalContext.target.setAttribute("cy", cy);
+      easingOriginalContext.line.setAttribute("x2", cx);
+      easingOriginalContext.line.setAttribute("y2", cy);
+      updateEasing();
+      Timewave.updateEasing(id);
+    };
+    const easingMouseupListener = e => {
+      svgEL.removeEventListener("mousemove", easingMousemoveListener);
+      window.removeEventListener("mouseup", easingMouseupListener);
+      svgEL.setAttribute("cursor", easingOriginalContext.cursor);
+      updateEasing();
+      update();
+    };
+    const easingMousedonwListener = e => {
+      svgEL.addEventListener("mousemove", easingMousemoveListener);
+      window.addEventListener("mouseup", easingMouseupListener);
+      const target = e.target;
+      easingOriginalContext.target = target;
+      easingOriginalContext.line = target === cp1EL ? cp1LineEL : cp2LineEL;
+      easingOriginalContext.cursor = svgEL.getAttribute("cursor");
+      easingOriginalContext.tPosition = toTimewavePosition(e);
+      easingOriginalContext.x = Number(target.getAttribute("cx"));
+      easingOriginalContext.y = Number(target.getAttribute("cy"));
+      svgEL.setAttribute("cursor", target.getAttribute("cursor"));
+    };
+    cp1EL.addEventListener("mousedown", easingMousedonwListener);
+    cp2EL.addEventListener("mousedown", easingMousedonwListener);
+
     // resize ----------------
     window.addEventListener("resize", e => {
-      Timewave.setSuitableWidth(durationEL, svgEL, CONTROL_BAR_WIDTH);
-      Timewave.adjustEasingControlBar(controlsEL,
+      Timewave.setPixelWidth(durationEL, svgEL, EASING_CONTROL_BAR_WIDTH);
+      Timewave.adjustEasingControlBar(adjustorEL,
                                       Number(durationEL.getAttribute("width")));
+      Timewave.setPixelR(cp1EL, svgEL, EASING_CONTROL_POINT_R);
+      Timewave.setPixelR(cp2EL, svgEL, EASING_CONTROL_POINT_R);
     });
   },
 
-  setPixelR: (target, svgEL, rx, ry) => {
-    const suitableRx = 1 / svgEL.parentNode.clientWidth * rx;
-    const suitableRy = 1 / svgEL.parentNode.clientHeight * ry;
+  setPixelR: (target, svgEL, r) => {
+    const suitableRx = 1 / svgEL.parentNode.clientWidth * r;
+    const suitableRy = 1 / svgEL.parentNode.clientHeight * r;
     target.setAttribute("rx", suitableRx);
     target.setAttribute("ry", suitableRy);
   },
@@ -567,7 +698,6 @@ const Timewave = {
     for (let propertyName in context.properties) {
       valueELs[propertyName] = $(`#${id} .${propertyName} .value`);
     }
-
     const observe = () => {
       const throbberPosition = animation.currentTime / context.resultTotalTime;
       throbber.style.left = `${throbberPosition * 100}%`;
@@ -602,6 +732,11 @@ const Timewave = {
       }
       case "ease-out" : {
         return Timewave.cubicBezier(0, 0, 0.58, 1, maxx, maxy);
+      }
+      default : {
+        let cps = BEZIER_REGEX.exec(easing);
+        return Timewave.cubicBezier(Number(cps[1]), Number(cps[2]),
+                                    Number(cps[3]), Number(cps[4]), maxx, maxy);
       }
     }
   },

@@ -22,12 +22,16 @@
     </section>
 
     <script>
-      const keyframe = { opacity: [1, 0.5, 0.1, 1],
+      const keyframes = { opacity: [1, 0.5, 0.1, 1],
                          width: ["100px", "0px"],
                          backgroundColor: ["red", "yellow", "lime", "cyan"] };
-      const timingeffect =
-        { delay: 100, duration: 1000, direction: "alternate-reverse", iterations: 3, fill: "both", easing: "ease-in"};
-      document.getElementById("animatable").animate(keyframe, timingeffect);
+      const timingeffect = { delay: 100,
+                             duration: 1000,
+                             direction: "alternate",
+                             iterations: 3,
+                             fill: "both",
+                             easing: "cubic-bezier(0.25, 0.1, 0.25, 1)" };
+      document.getElementById("animatable").animate(keyframes, timingeffect);
     </script>
 
     <section id="cloneables" style="display: none;">
@@ -53,13 +57,19 @@
             </div>
           </div>
           <div class="right">
-            <svg viewBox="0 -0.5 1 2"
+            <svg viewBox="-0.1 -0.5 1.1 2"
                  preserveAspectRatio="none meet"
                  cursor="grab" >
               <path class="graph" vector-effect="non-scaling-stroke" stroke-width="1" d="M0,0 L1,1 L1,0"></path>
               <path class="lines" vector-effect="non-scaling-stroke" stroke-width="1" d="M0,0 L1,1"></path>
-              <g class="controls" transform="translate(-0.005, 0)" >
+              <g class="duration-control" transform="translate(-0.005, 0)" >
                 <rect cursor="col-resize" class="duration" x="0.5" y="0" width="0.01" height="1"/>
+              </g>
+              <g class="easing-control">
+                <line class="cp1-line" x1="0" y1="0" x2="1" y2="1" vector-effect="non-scaling-stroke" stroke-width="1"/>
+                <line class="cp2-line" x1="0" y1="0" x2="1" y2="1" vector-effect="non-scaling-stroke" stroke-width="1"/>
+                <ellipse class="cp1" cx="0" cy="0" rx="0.1" ry="0.1" cursor="default" vector-effect="non-scaling-stroke" stroke-width="1" />
+                <ellipse class="cp2" cx="0" cy="1" rx="0.1" ry="0.1" cursor="default" vector-effect="non-scaling-stroke" stroke-width="1" />
               </g>
             </svg>
           </div>
