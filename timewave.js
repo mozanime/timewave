@@ -214,11 +214,9 @@ const Timewave = {
     const width = canvas.width;
 
     const propertyNames = focus ? [focus] : Object.keys(properties);
-    if (!focus) {
-      canvasContext.globalAlpha = 1;
-      canvasContext.fillStyle = "white";
-      canvasContext.fillRect(0, 0, width, height);
-    }
+    canvasContext.globalAlpha = 1;
+    canvasContext.fillStyle = "white";
+    canvasContext.fillRect(0, 0, width, height);
 
     (paint = index => {
       if (index >= propertyNames.length) {
@@ -503,14 +501,14 @@ const Timewave = {
         x2 = delayx + durationx;
         y2 = 0;
       } else {
-        cx1 = delayx + durationx - p.cx2;
-        cy1 = p.cy2;
-        cx2 = delayx + durationx - p.cx1;
-        cy2 = p.cy1;
-        x1 = delayx;
-        y1 = 0;
-        x2 = delayx + durationx;
-        y2 = 1;
+        cx1 = delayx + durationx - p.cx1;
+        cy1 = p.cy1;
+        cx2 = delayx + durationx - p.cx2;
+        cy2 = p.cy2;
+        x1 = delayx + durationx;
+        y1 = 1;
+        x2 = delayx;
+        y2 = 0;
       }
       cp1EL.setAttribute("cx", cx1);
       cp1EL.setAttribute("cy", cy1);
@@ -645,14 +643,24 @@ const Timewave = {
     const easingOriginalContext = {};
     const updateEasing = () => {
       const width = 1 / context.resultTotalTime * context.totalTime;
-      const height = 1;
       const xrate = width / context.totalTime;
-      const delayx = animation.effect.timing.delay * xrate;
       const durationx = animation.effect.timing.duration * xrate;
-      const cp1x = (Number(cp1EL.getAttribute("cx")) - delayx) / durationx;
-      const cp1y = 1 - Number(cp1EL.getAttribute("cy"));
-      const cp2x = (Number(cp2EL.getAttribute("cx")) - delayx) / durationx;
-      const cp2y = 1 - Number(cp2EL.getAttribute("cy"));
+      let cp1x, cp1y, cp2x, cp2y;
+      if (Timewave.isForwading(animation.effect.timing.direction, 0)) {
+        cp1x = (Number(cp1LineEL.getAttribute("x2"))
+                - Number(cp1LineEL.getAttribute("x1"))) / durationx;
+        cp1y = 1 - Number(cp1EL.getAttribute("cy"));
+        cp2x = (Number(cp2LineEL.getAttribute("x1"))
+                - Number(cp2LineEL.getAttribute("x2"))) / durationx;
+        cp2y = 1 - Number(cp2EL.getAttribute("cy"));
+      } else {
+        cp1x = (Number(cp1LineEL.getAttribute("x1"))
+                - Number(cp1LineEL.getAttribute("x2"))) / durationx;
+        cp1y = 1 - Number(cp1EL.getAttribute("cy"));
+        cp2x = (Number(cp2LineEL.getAttribute("x2"))
+                - Number(cp2LineEL.getAttribute("x1"))) / durationx;
+        cp2y = 1 - Number(cp2EL.getAttribute("cy"));
+      }
       animation.effect.timing.easing =
         `cubic-bezier(${cp1x}, ${cp1y}, ${cp2x}, ${cp2y})`;
     };
