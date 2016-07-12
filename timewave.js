@@ -376,14 +376,13 @@ const Timewave = {
     const keyframes = animation.effect.getKeyframes();
     const width = svgEL.viewBox.baseVal.width;
     const height = svgEL.viewBox.baseVal.height;
-    const yrate = width / (property.max - property.min);
-    const xrate = width / (keyframes.length - 1);
+    const yrate = height / (property.max - property.min);
     let d = "";
     keyframes.forEach((keyframe, i) => {
       if (keyframe[propertyName]) {
         d += i === 0 ? "M" : "L";
         const value = Timewave.numberize(propertyName, keyframe[propertyName]);
-        d += `${i * xrate},${(property.max - value) * yrate} `;
+        d += `${keyframe["computedOffset"]},${(property.max - value) * yrate} `;
       }
     });
     d += `L${width},${height} L0,${height}`;
@@ -396,6 +395,9 @@ const Timewave = {
       pathEL.setAttribute("fill", `${COLORS[propertyName]}88`);
       pathEL.setAttribute("stroke", COLORS[propertyName]);
     }
+
+    Timewave.addKeyframeControls(propertyName, context, animation, svgEL);
+
     pathEL.addEventListener("mouseenter", (e) => {
       Timewave.updateCanvas(animation.id, propertyName);
     });
@@ -414,12 +416,11 @@ const Timewave = {
     linearGradientEL.setAttribute("id", gradientID);
 
     const color = COLORS["opacity"];
-    const keyframeWidth = svgEL.viewBox.baseVal.width / (keyframes.length - 1);
-    keyframes.forEach((keyframe, i) => {
+    keyframes.forEach(keyframe => {
       if (keyframe["opacity"]) {
         const stopEL =
           addChildNS(linearGradientEL, "http://www.w3.org/2000/svg", "stop");
-        stopEL.setAttribute("offset", i * keyframeWidth);
+        stopEL.setAttribute("offset", keyframe["computedOffset"]);
         stopEL.setAttribute("stop-color", color);
         const value = Timewave.numberize("opacity", keyframe["opacity"]);
         stopEL.setAttribute("stop-opacity", value);
@@ -443,12 +444,11 @@ const Timewave = {
     const gradientID = `${animation.id}-${propertyName}`;
     linearGradientEL.setAttribute("id", gradientID);
 
-    const keyframeWidth = svgEL.viewBox.baseVal.width / (keyframes.length - 1);
-    keyframes.forEach((keyframe, i) => {
+    keyframes.forEach(keyframe => {
       if (keyframe[propertyName]) {
         const stopEL =
           addChildNS(linearGradientEL, "http://www.w3.org/2000/svg", "stop");
-        stopEL.setAttribute("offset", i * keyframeWidth);
+        stopEL.setAttribute("offset", keyframe["computedOffset"]);
         stopEL.setAttribute("stop-color", keyframe[propertyName]);
         linearGradientEL.appendChild(stopEL);
       }
@@ -705,6 +705,20 @@ const Timewave = {
                                       Number(durationEL.getAttribute("width")));
       Timewave.setPixelR(cp1EL, svgEL, EASING_CONTROL_POINT_R);
       Timewave.setPixelR(cp2EL, svgEL, EASING_CONTROL_POINT_R);
+    });
+  },
+
+  addKeyframeControls: (propertyName, context, animation, svgEL) => {
+    const property = context.properties[propertyName];
+    const keyframes = animation.effect.getKeyframes();
+    const width = svgEL.viewBox.baseVal.width;
+    const height = svgEL.viewBox.baseVal.height;
+    const yrate = width / (property.max - property.min);
+    const xrate = width / (keyframes.length - 1);
+    keyframes.forEach(keyframe => {
+      if (keyframe[propertyName]) {
+        const value = Timewave.numberize(propertyName, keyframe[propertyName]);
+      }
     });
   },
 
