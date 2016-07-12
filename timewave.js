@@ -120,11 +120,22 @@ const Timewave = {
     Timewave.buildEasing(animation.id);
     Timewave.buildProperties(animation.id);
 
+    const easingEL = $$(".row.easing");
+    easingEL.dataset.height = easingEL.querySelector(".left").clientHeight;
+    const keyframesEL = $$(".row.keyframes");
+    keyframesEL.dataset.height =
+      keyframesEL.querySelector(".left").clientHeight;
+    easingEL.style.display = "none";
+    keyframesEL.style.display = "none";
+    for (let propertyEL of animationEL.querySelectorAll(".row.property")) {
+      propertyEL.dataset.height =
+        propertyEL.querySelector(".left").clientHeight;
+      propertyEL.style.display = "none";
+    }
+
     Timewave.replay(animation.id);
 
-    //completeGraphEL.addEventListener("click", () => {
-    //});
-
+    Timewave.addDisplayControls(animation.id);
   },
 
   buildPropertiesImage: id => {
@@ -670,6 +681,51 @@ const Timewave = {
         const value = Timewave.numberize(propertyName, keyframe[propertyName]);
       }
     });
+  },
+
+  addDisplayControls: id => {
+    const animationEL = $(`#${id}`);
+    const delay = 0;
+    const duration = 50;
+    animationEL.querySelector(".row.result").addEventListener("click", () => {
+      const isVisibled =
+        animationEL.querySelector(".row.easing").style.display !== "none";
+      Timewave.setRowPaneVisible(animationEL.querySelector(".row.easing"),
+                                 !isVisibled, duration, 0);
+      Timewave.setRowPaneVisible(animationEL.querySelector(".row.keyframes"),
+                                 !isVisibled, duration, delay);
+      const propertyELs = animationEL.querySelectorAll(".row.property");
+      for (let i = 0; i < propertyELs.length; i++) {
+        const propertyEL = propertyELs[i];
+        Timewave.setRowPaneVisible(propertyEL, !isVisibled,
+                                   duration, delay * (i + 2));
+      }
+    });
+  },
+
+  setRowPaneVisible: (rowEL, isVisible, duration, delay) => {
+    const height = rowEL.dataset.height;
+    const rightEL = rowEL.querySelector(".right");
+    const leftEL = rowEL.querySelector(".left");
+    let start, end;
+    if (isVisible) {
+      rowEL.style.display = "block";
+      start = "0px";
+      end = `${height}px`;
+    } else {
+      end = "0px";
+      start = `${height}px`;
+    }
+    const animation = leftEL.animate({ height: [`${start}`, `${end}`] },
+                                     { delay: delay, duration:
+                                       duration, fill: "both" });
+    rightEL.animate({ height: [`${start}`, `${end}`] },
+                    { delay: delay, duration: duration, fill: "both" });
+    if (!isVisible) {
+      animation.finished.then(() => {
+        rowEL.style.display = "none";
+      });
+    }
   },
 
   // other --------------------------------------------------------------
