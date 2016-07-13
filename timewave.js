@@ -418,6 +418,21 @@ const Timewave = {
       }
       d += `L${nextx},${height} L${x},${height}`;
     }
+
+    // fill-mode
+    const isBackwards = animation.effect.timing.fill === "both" ||
+                        animation.effect.timing.fill === "backwards";
+    if (isBackwards && !Timewave.isForwarding(direction, 0) && delay !== 0) {
+      d += `M0,1 L0,0 L${delayx},0 L${delayx},1 L0,1`;
+    }
+    const isForwards = animation.effect.timing.fill === "both" ||
+                       animation.effect.timing.fill === "forwards";
+    if (isForwards &&
+        iterationCount === animation.effect.timing.iterations &&
+        Timewave.isForwarding(direction, iterationCount - 1)) {
+      const sx = delayx + iterationWidth * iterationCount;
+      d += `M${sx},1 L${sx},0 L1,0 L1,1 L${sx},1 `;
+    }
     svgEL.querySelector(".graph").setAttribute("d", d);
 
     // lines
