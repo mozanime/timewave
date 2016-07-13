@@ -9,6 +9,7 @@ body {
 /** tools **/
 #devtool {
 }
+
 #timewave {
   position: absolute;
   bottom: 0px;
@@ -17,6 +18,11 @@ body {
 
 .animation {
   font-family: monospace;
+}
+
+label {
+  -moz-user-select: none;
+  pointer-events: none;
 }
 
 /** content **/
@@ -31,6 +37,8 @@ body {
   width: 14em;
   color: #0095dd;
   background-color: #f8f8f8;
+  -moz-user-select: none;
+  pointer-events: none;
 }
 .row .right {
   width: calc(100% - 14em - 1px);
