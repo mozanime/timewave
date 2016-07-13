@@ -404,8 +404,8 @@ const Timewave = {
     for (let i = 0; i < iterationCount; i++) {
       const x = delayx + i * iterationWidth;
       const nextx = x + iterationWidth;
-      const isForwading = Timewave.isForwading(direction, i);
-      if (isForwading) {
+      const isForwarding = Timewave.isForwarding(direction, i);
+      if (isForwarding) {
         d += `M${x},${height} `
           + `C${x + p.cx1},${p.cy1} `
           + `${x + p.cx2},${p.cy2} `
@@ -451,7 +451,7 @@ const Timewave = {
         Timewave.getControlPoints(animation.effect.timing.easing,
                                   durationx, height);
       let cx1, cy1, cx2, cy2, x1, y1, x2, y2;
-      if (Timewave.isForwading(animation.effect.timing.direction, 0)) {
+      if (Timewave.isForwarding(animation.effect.timing.direction, 0)) {
         cx1 = delayx + p.cx1;
         cy1 = p.cy1;
         cx2 = delayx + p.cx2;
@@ -606,7 +606,7 @@ const Timewave = {
       const xrate = width / context.totalTime;
       const durationx = animation.effect.timing.duration * xrate;
       let cp1x, cp1y, cp2x, cp2y;
-      if (Timewave.isForwading(animation.effect.timing.direction, 0)) {
+      if (Timewave.isForwarding(animation.effect.timing.direction, 0)) {
         cp1x = (Number(cp1LineEL.getAttribute("x2"))
                 - Number(cp1LineEL.getAttribute("x1"))) / durationx;
         cp1y = 1 - Number(cp1EL.getAttribute("cy"));
@@ -734,7 +734,7 @@ const Timewave = {
     Timewave.startObserver(id);
   },
 
-  isForwading: (direction, count) => {
+  isForwarding: (direction, count) => {
     return direction === "normal" ||
            (direction === "alternate" && count % 2 === 0) ||
            (direction === "alternate-reverse" && count % 2 === 1);
