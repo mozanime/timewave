@@ -789,14 +789,14 @@ const Timewave = {
     // we can use mutableobserver.observe(node, { animations: true });
     const context = Timewave.contexts[id];
     const animation = context.target.getAnimations({ id: id })[0];
-    const throbber = $(`#${id} .throbber`);
+    const scrubber = $(`#${id} .scrubber`);
     const valueELs = {};
     for (let propertyName in context.properties) {
       valueELs[propertyName] = $(`#${id} .${propertyName} .value`);
     }
     const observe = () => {
-      const throbberPosition = animation.currentTime / context.resultTotalTime;
-      throbber.style.left = `${throbberPosition * 100}%`;
+      const scrubberPosition = animation.currentTime / context.resultTotalTime;
+      scrubber.style.left = `${scrubberPosition * 100}%`;
       const computedStyle = window.getComputedStyle(context.target);
       for (let propertyName in context.properties) {
         const value = computedStyle[propertyName];

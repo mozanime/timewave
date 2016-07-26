@@ -108,7 +108,7 @@ label {
 }
 
 /** result **/
-.row.result .throbber {
+.row.result .scrubber {
   position: absolute;
   background-color: red;
   width: 1px;
